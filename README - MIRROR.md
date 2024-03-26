@@ -13,21 +13,20 @@
 
 I got frustrated from not being able to binge-watch some YouTube channels. Unable to find a working userscript, I created this. Hopefully, it will be as useful to you as it is to me.
 
-Also works on the **mobile browser** version of YouTube. 
+Also works on the **mobile browser** version of YouTube.
+
+> The [GitHub Version](https://github.com/RobertWesner/YouTube-Play-All) takes priority and
+> might be updated before this mirror is. Make sure to check there for newer versions.
 
 ## Installation
 
-1. Install a userscript manager. For example, [Tampermonkey](https://www.tampermonkey.net/):
-   - [Firefox](https://addons.mozilla.org/en/firefox/addon/tampermonkey/)<br>
-   - [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)<br>
-   - [Edge](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)<br>
-   - [Opera](https://addons.opera.com/en/extensions/details/tampermonkey-beta/)<br>
-
-2. Install this userscript by clicking [this link](../../raw/main/script.user.js).
+Add the userscript by clicking [this link (GitHub)](https://github.com/RobertWesner/YouTube-Play-All/raw/main/script.user.js)
+or using the `Install` button.
 
 Available mirrors:
-   - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
-   - [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
+- [GitHub](https://github.com/RobertWesner/YouTube-Play-All)
+- [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
+- [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
 
 ## Usage
 

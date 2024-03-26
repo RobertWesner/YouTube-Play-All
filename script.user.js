@@ -31,8 +31,15 @@
             background-color: #d264de;
         }
         
+        /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
+        .play-all-button ~ .play-all-button {
+            display: none;
+        }
+        
+        /* Fix for mobile view */
         ytm-feed-filter-chip-bar-renderer .play-all-button {
             margin-left: 0;
+            padding: 0.4em;
         }
     </style>`);
 
@@ -47,20 +54,33 @@
                 const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60 + 2 /* ID starts with "UC" */;
                 const id = html.substring(i, i + 22);
 
-                let parent, latestVideo;
-                if (location.host === 'www.youtube.com') {
-                    parent = document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
-                    latestVideo = document.querySelector('div#primary a#thumbnail').attributes.href.value;
-                } else if (location.host === 'm.youtube.com') {
-                    parent = document.querySelector('ytm-feed-filter-chip-bar-renderer > div');
-                    latestVideo = document.querySelector('ytm-compact-video-renderer a').attributes.href.value;
+                let [parent, latestVideo] =
+                    location.host ===
+                        'm.youtube.com' ? [
+                            // mobile view
+                            document.querySelector('ytm-feed-filter-chip-bar-renderer > div'),
+                            document.querySelector('ytm-compact-video-renderer a'),
+                        ] : [
+                            // desktop view
+                            document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips'),
+                            document.querySelector('div#primary a#thumbnail'),
+                        ];
+
+                if (!latestVideo) {
+                    // content was not loaded yet, no latest video found -> retry next cycle
+                    return;
                 }
 
-                // list=UU<ID> adds shorts into the playlist, list=UULF<ID> only has actual videos
+                latestVideo = latestVideo.attributes.href.value;
                 parent.insertAdjacentHTML(
                     'beforeend',
-                    `<a class="play-all-button" href="${latestVideo}&list=UULF${id}">Play All</a>`,
+                    // Check if popular videos are displayed
+                    parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
+                        // list=UULP has the all videos sorted by popular
+                        ? `<a class="play-all-button" href="${latestVideo}&list=UULP${id}">Play Popular</a>`
+                        // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
+                        : `<a class="play-all-button" href="${latestVideo}&list=UULF${id}">Play All</a>`,
                 );
-            });
+            }).catch();
     }, 1000);
 })();
