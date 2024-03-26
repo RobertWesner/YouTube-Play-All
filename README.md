@@ -42,6 +42,7 @@ It may take a few seconds for the button to be dynamically added.
 ### Playing Sorted By Most Popular
 
 When sorting by most popular, the button will take you to the "Popular videos" playlist.
+
 ![popular.png](readme/popular.png)
 
 
