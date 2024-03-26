@@ -25,6 +25,10 @@ Also works on the **mobile browser** version of YouTube.
 
 2. Install this userscript by clicking [this link](../../raw/main/script.user.js).
 
+Available mirrors:
+   - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
+   - [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
+
 ## Usage
 
 Once installed, you should be able to see the vibrant Play-All button when visiting or navigating to the videos section of a YouTube channel.
