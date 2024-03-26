@@ -13,6 +13,8 @@
 
 I got frustrated from not being able to binge-watch some YouTube channels. Unable to find a working userscript, I created this. Hopefully, it will be as useful to you as it is to me.
 
+Also works on the **mobile browser** version of YouTube. 
+
 ## Installation
 
 1. Install a userscript manager. For example, [Tampermonkey](https://www.tampermonkey.net/):
