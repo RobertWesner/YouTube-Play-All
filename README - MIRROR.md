@@ -35,13 +35,13 @@ Simply clicking it or opening the link in a new tab will send you to the newest 
 
 It may take a few seconds for the button to be dynamically added.
 
-![screenshot.png](readme/screenshot.png)
-![screenshot_dark.png](readme/screenshot_dark.png)
+![screenshot.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/screenshot.png)
+![screenshot_dark.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/screenshot_dark.png)
 
 ### Playing Sorted By Most Popular
 
 When sorting by most popular, the button will take you to the "Popular videos" playlist.
-![popular.png](readme/popular.png)
+![popular.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/popular.png)
 
 
 ## Issues
@@ -50,4 +50,4 @@ If your current installation does not work, please update it by following the in
 
 ## License
 
-This project is licensed under the [MIT License](../../raw/main/LICENSE.txt).
+This project is licensed under the [MIT License](https://github.com/RobertWesner/YouTube-Play-All/raw/main/LICENSE.txt).
