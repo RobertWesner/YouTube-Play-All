@@ -39,4 +39,4 @@ If your current installation does not work, please update it by following the in
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0](../../raw/main/LICENSE.txt).
+This project is licensed under the [MIT License](../../raw/main/LICENSE.txt).

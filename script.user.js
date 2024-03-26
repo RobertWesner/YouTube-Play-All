@@ -1,12 +1,13 @@
 // ==UserScript==
-// @name         YouTube Play All
-// @namespace    http://robert.wesner.io/
-// @version      2024-03-21
-// @description  Adds the Play-All-Button to the videos section of a YouTube-Channel
-// @author       Robert Wesner
-// @match        https://www.youtube.com/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
-// @grant        none
+// @name            YouTube Play All
+// @description     Adds the Play-All-Button to the videos section of a YouTube-Channel
+// @version         2024-03-21
+// @author          Robert Wesner (https://robert.wesner.io)
+// @license         MIT
+// @namespace       http://robert.wesner.io/
+// @match           https://www.youtube.com/*
+// @icon            https://www.google.com/s2/favicons?sz=64&domain=youtube.com
+// @grant           none
 // ==/UserScript==
 
 (function() {
@@ -45,8 +46,8 @@
                 // list=UU<ID> adds shorts into the playlist, list=UULF<ID> only has actual videos
                 document.querySelector('ytd-feed-filter-chip-bar-renderer').querySelector('iron-selector#chips').insertAdjacentHTML('beforeend', `
                     <a class="play-all-button" href="${
-                    document.querySelector('div#primary a#thumbnail').attributes.href.value
-                }&list=UULF${id}">Play All</a>
+                        document.querySelector('div#primary a#thumbnail').attributes.href.value
+                    }&list=UULF${id}">Play All</a>
                 `);
             });
     }, 5000);
