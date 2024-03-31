@@ -8,34 +8,42 @@ https://www.youtube.com/playlist?list=...
 ## UU | Uploads from...
 Contains both videos and shorts
 
-## UULF | Videos
+## Videos
+
+### UULF | Videos
 Only videos, no shorts
 
-## UULP | Popular videos
+### UULP | Popular videos
 Only videos, no shorts, sorted by most popular descending
 
-## UUPS | Popular short videos
-Only shorts, sorted by most popular descending
+## Shorts
 
-## UUSH | Short videos
+### UUSH | Short videos
 Only shorts
 
-# Dead links
+### UUPS | Popular short videos
+Only shorts, sorted by most popular descending
 
-## UULV | undefined - Youtube
-> The playlist does not exist.
+## Live streams
 
-## UUMF | undefined - Youtube
-> The playlist does not exist.
+### UULV | Live streams
+Previously streamed
 
-## UUMO | undefined - Youtube
-> The playlist does not exist.
+### UUPV | Popular live streams
+Previously streamed, sorted by most popular descending
+
+## Members-only
+
+### UUMF | Members-only videos
+Members-only videos
+
+### UUMV | Members-only live streams
+Members-only live streams
+
+### UUMO | Members-only videos
+Contains both members-only videos and live streams
+
+# Unidentified links
 
 ## UUMS | undefined - Youtube
-> The playlist does not exist.
-
-## UUMV | undefined - Youtube
-> The playlist does not exist.
-
-## UUPV | undefined - Youtube
-> The playlist does not exist.
+Presumably members-only shorts, given the MS name, but could not verify with any existing channels.
