@@ -13,7 +13,7 @@
 
 I got frustrated from not being able to binge-watch some YouTube channels. Unable to find a working userscript, I created this. Hopefully, it will be as useful to you as it is to me.
 
-Also works on the **mobile browser** version of YouTube.
+Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube.
 
 > The [GitHub Version](https://github.com/RobertWesner/YouTube-Play-All) takes priority and
 > might be updated before this mirror is. Make sure to check there for newer versions.
@@ -43,6 +43,13 @@ It may take a few seconds for the button to be dynamically added.
 When sorting by most popular, the button will take you to the "Popular videos" playlist.
 
 ![popular.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/popular.png)
+
+
+### Shorts
+
+Shorts can be played both by latest and most popular.
+
+![shorts.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/shorts.png)
 
 
 ## Issues

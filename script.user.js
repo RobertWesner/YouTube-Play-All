@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
-// @description     Adds the Play-All-Button to the videos section of a YouTube-Channel
-// @version         2024-03-25
+// @description     Adds the Play-All-Button to the videos and shorts sections of a YouTube-Channel
+// @version         2024-03-31
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -44,7 +44,11 @@
     </style>`);
 
     setInterval(() => {
-        if (!window.location.pathname.endsWith('/videos') || document.querySelector('.play-all-button')) {
+        if (!(window.location.pathname.endsWith('/videos') || window.location.pathname.endsWith('/shorts'))) {
+            return;
+        }
+
+        if (document.querySelector('.play-all-button')) {
             return;
         }
 
@@ -59,7 +63,7 @@
                         'm.youtube.com' ? [
                             // mobile view
                             document.querySelector('ytm-feed-filter-chip-bar-renderer > div'),
-                            document.querySelector('ytm-compact-video-renderer a'),
+                            document.querySelector('ytm-compact-video-renderer a, .reel-item-endpoint'),
                         ] : [
                             // desktop view
                             document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips'),
@@ -71,15 +75,30 @@
                     return;
                 }
 
-                latestVideo = latestVideo.attributes.href.value;
+                // See: available-lists.md
+                let allPlaylist, popularPlaylist;
+                if (window.location.pathname.endsWith('/videos')) {
+                    // Normal videos
+                    allPlaylist = 'UULF';
+                    popularPlaylist = 'UULP';
+                    latestVideo = latestVideo.attributes.href.value;
+                } else {
+                    // Shorts
+                    allPlaylist = 'UUSH';
+                    popularPlaylist = 'UUPS';
+                    // get just the short ID and play it in regular video mode
+                    latestVideo = latestVideo.attributes.href.value.split('/');
+                    latestVideo = `/watch?v=${latestVideo[latestVideo.length - 1]}`;
+                }
+
                 parent.insertAdjacentHTML(
                     'beforeend',
                     // Check if popular videos are displayed
                     parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
                         // list=UULP has the all videos sorted by popular
-                        ? `<a class="play-all-button" href="${latestVideo}&list=UULP${id}">Play Popular</a>`
+                        ? `<a class="play-all-button" href="${latestVideo}&list=${popularPlaylist}${id}">Play Popular</a>`
                         // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
-                        : `<a class="play-all-button" href="${latestVideo}&list=UULF${id}">Play All</a>`,
+                        : `<a class="play-all-button" href="${latestVideo}&list=${allPlaylist}${id}">Play All</a>`,
                 );
             }).catch();
     }, 1000);
