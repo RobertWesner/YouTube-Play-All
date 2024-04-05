@@ -13,12 +13,10 @@ Invalid lists (HTTP 404) will return the user to the YouTube homepage.
 There do not appear to be any prefixes containing lowercase letters or numbers.
 
 Checked so far (represented by RegEx):
-- list=`[A-Z]{2}`
+- list=`[A-Z]{1,4}`
 - list=`UU[A-Za-z0-9]{2}`
-- list=`[A-Z]{4}`
 
 Needs to be checked:
-- list=`[A-Z]{3}`
 - list=`[A-Z]{4}UC`
 - list=`RD[A-Z]{4}`
 
@@ -120,13 +118,13 @@ Always show this error message when viewed **directly as playlist**:
 Listed here are prefixes that do not work in `/playlist` and `/watch`.
 
 ### 2 Letter Prefixes
-- BB
 - MQ
 - TT
 
+### 3 Letter Prefixes
+
 ### 4 Letter Prefixes
 - ASRX
-- BBAA to BBZZ (`BB[A-Z]{2}`)
 - MLCA
 - RDAO
 - RDAT
@@ -142,3 +140,11 @@ Listed here are prefixes that do not work in `/playlist` and `/watch`.
   - Most likely a mix playlist.
   - Possibly relevant: UC is used as channel prefix `https://www.youtube.com/channel/UC<ID>`.
   - Found via: https://www.reddit.com/r/youtubedl/comments/nlttmd/playlist_type_unviewable_anybody_seen_this_before/
+
+### n Letter Prefixes
+- `BB.*`
+  - unviewable
+  - any character, even non-alphanumeric can be used after BB
+  - does **not** end with ID
+  - the only known playlist prefix that behaves this way
+  - even with none or  1000+ symbols after `BB` it still does not give HTTP 404
