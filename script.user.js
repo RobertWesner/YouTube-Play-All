@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos and shorts sections of a YouTube-Channel
-// @version         2024-03-31
+// @version         2024-05-20
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -43,7 +43,56 @@
         }
     </style>`);
 
-    setInterval(() => {
+    let id;
+    const apply = () => {
+        let [parent, latestVideo] =
+            location.host ===
+            'm.youtube.com' ? [
+                // mobile view
+                document.querySelector('ytm-feed-filter-chip-bar-renderer > div'),
+                document.querySelector('ytm-compact-video-renderer a, .reel-item-endpoint'),
+            ] : [
+                // desktop view
+                document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips'),
+                document.querySelector('div#primary a#thumbnail'),
+            ];
+
+        if (!latestVideo) {
+            // content was not loaded yet, no latest video found -> retry next cycle
+            return;
+        }
+
+        // See: available-lists.md
+        let allPlaylist, popularPlaylist;
+        if (window.location.pathname.endsWith('/videos')) {
+            // Normal videos
+            allPlaylist = 'UULF';
+            popularPlaylist = 'UULP';
+            latestVideo = latestVideo.attributes.href.value;
+        } else {
+            // Shorts
+            allPlaylist = 'UUSH';
+            popularPlaylist = 'UUPS';
+            // get just the short ID and play it in regular video mode
+            latestVideo = latestVideo.attributes.href.value.split('/');
+            latestVideo = `/watch?v=${latestVideo[latestVideo.length - 1]}`;
+        }
+
+        parent.insertAdjacentHTML(
+            'beforeend',
+            // Check if popular videos are displayed
+            parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
+                // list=UULP has the all videos sorted by popular
+                ? `<a class="play-all-button" href="${latestVideo}&list=${popularPlaylist}${id}">Play Popular</a>`
+                // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
+                : `<a class="play-all-button" href="${latestVideo}&list=${allPlaylist}${id}">Play All</a>`,
+        );
+    };
+
+    window.addEventListener('yt-navigate-finish',async () => {
+        const observer = new MutationObserver(apply);
+        observer.disconnect();
+
         if (!(window.location.pathname.endsWith('/videos') || window.location.pathname.endsWith('/shorts'))) {
             return;
         }
@@ -52,54 +101,18 @@
             return;
         }
 
-        fetch('.')
-            .then(_ => _.text())
-            .then(html => {
-                const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60 + 2 /* ID starts with "UC" */;
-                const id = html.substring(i, i + 22);
+        const html = await (await fetch('.')).text();
+        const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60 + 2 /* ID starts with "UC" */;
+        id = html.substring(i, i + 22);
 
-                let [parent, latestVideo] =
-                    location.host ===
-                        'm.youtube.com' ? [
-                            // mobile view
-                            document.querySelector('ytm-feed-filter-chip-bar-renderer > div'),
-                            document.querySelector('ytm-compact-video-renderer a, .reel-item-endpoint'),
-                        ] : [
-                            // desktop view
-                            document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips'),
-                            document.querySelector('div#primary a#thumbnail'),
-                        ];
+        // Initially generate button
+        apply();
 
-                if (!latestVideo) {
-                    // content was not loaded yet, no latest video found -> retry next cycle
-                    return;
-                }
-
-                // See: available-lists.md
-                let allPlaylist, popularPlaylist;
-                if (window.location.pathname.endsWith('/videos')) {
-                    // Normal videos
-                    allPlaylist = 'UULF';
-                    popularPlaylist = 'UULP';
-                    latestVideo = latestVideo.attributes.href.value;
-                } else {
-                    // Shorts
-                    allPlaylist = 'UUSH';
-                    popularPlaylist = 'UUPS';
-                    // get just the short ID and play it in regular video mode
-                    latestVideo = latestVideo.attributes.href.value.split('/');
-                    latestVideo = `/watch?v=${latestVideo[latestVideo.length - 1]}`;
-                }
-
-                parent.insertAdjacentHTML(
-                    'beforeend',
-                    // Check if popular videos are displayed
-                    parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
-                        // list=UULP has the all videos sorted by popular
-                        ? `<a class="play-all-button" href="${latestVideo}&list=${popularPlaylist}${id}">Play Popular</a>`
-                        // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
-                        : `<a class="play-all-button" href="${latestVideo}&list=${allPlaylist}${id}">Play All</a>`,
-                );
-            }).catch();
-    }, 1000);
+        // Regenerate button if switched between Latest and Popular
+        observer.observe(document.querySelector('ytd-rich-grid-renderer'), {
+            attributes: true,
+            childList: false,
+            subtree: false
+        });
+    });
 })();

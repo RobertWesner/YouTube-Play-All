@@ -16,8 +16,10 @@ Checked so far (represented by RegEx):
 - list=`[A-Z]{1,4}`
 - list=`UU[A-Za-z0-9]{2}`
 
-Needs to be checked:
+Work in progress:
 - list=`[A-Z]{4}UC`
+
+Needs to be checked:
 - list=`RD[A-Z]{4}`
 
 Unrealistic to brute force but possibly relevant:
@@ -91,10 +93,10 @@ Valid links (HTTP 200) that could not be verified _yet_ with existing channels.
 Presumably members-only shorts, given the MS name, but could not verify with any existing channels.
 
 ## RDCL
->  The playlist does not exist.
+> The playlist does not exist.
 
 ## RDTM
->  The playlist does not exist.
+> The playlist does not exist.
 
 ## CL
 > The playlist does not exist.
@@ -121,8 +123,6 @@ Listed here are prefixes that do not work in `/playlist` and `/watch`.
 - MQ
 - TT
 
-### 3 Letter Prefixes
-
 ### 4 Letter Prefixes
 - ASRX
 - MLCA
@@ -147,4 +147,4 @@ Listed here are prefixes that do not work in `/playlist` and `/watch`.
   - any character, even non-alphanumeric can be used after BB
   - does **not** end with ID
   - the only known playlist prefix that behaves this way
-  - even with none or  1000+ symbols after `BB` it still does not give HTTP 404
+  - even with none or 1000+ symbols after `BB` it still does not give HTTP 404
