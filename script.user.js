@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos and shorts sections of a YouTube-Channel
-// @version         2024-05-20
+// @version         2024-06-17.0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -89,14 +89,15 @@
         );
     };
 
-    window.addEventListener('yt-navigate-finish',async () => {
-        const observer = new MutationObserver(apply);
+    const observer = new MutationObserver(apply);
+    const addButton = async () => {
         observer.disconnect();
 
         if (!(window.location.pathname.endsWith('/videos') || window.location.pathname.endsWith('/shorts'))) {
             return;
         }
 
+        // This check is necessary for the mobile Interval
         if (document.querySelector('.play-all-button')) {
             return;
         }
@@ -109,10 +110,34 @@
         apply();
 
         // Regenerate button if switched between Latest and Popular
-        observer.observe(document.querySelector('ytd-rich-grid-renderer'), {
+        const element = document.querySelector('ytd-rich-grid-renderer');
+        if (!element) {
+            return;
+        }
+
+        observer.observe(element, {
             attributes: true,
             childList: false,
             subtree: false
         });
-    });
+    };
+
+    // Removing the button prevents it from still existing when switching between "Videods" and "Shorts"
+    // This is necessary due to the mobile Interval requiring a check for an already existing button
+    const removeButton = () => {
+        const button = document.querySelector('.play-all-button');
+
+        if (button) {
+            button.remove();
+        }
+    };
+
+    if (location.host === 'm.youtube.com') {
+        // The "yt-navigate-finish" event does not fire on mobile
+        // Unfortunately pushState is triggered before the navigation occurs, so a Proxy is useless
+        setInterval(addButton, 1000);
+    } else {
+        window.addEventListener('yt-navigate-start', removeButton);
+        window.addEventListener('yt-navigate-finish', addButton);
+    }
 })();

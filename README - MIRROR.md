@@ -31,7 +31,7 @@ Available mirrors:
 ## Usage
 
 Once installed, you should be able to see the vibrant Play-All button when visiting or navigating to the videos section of a YouTube channel.
-Simply clicking it or opening the link in a new tab will send you to the newest video playing inside the "Uploads from..." playlist.
+Simply clicking it or opening the link in a new tab will send you to the newest video playing inside the "Videos" playlist.
 
 It may take a few seconds for the button to be dynamically added.
 
