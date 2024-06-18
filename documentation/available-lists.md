@@ -6,6 +6,12 @@ https://www.youtube.com/playlist?list=...
 https://www.youtube.com/watch?v=...&list=...
 ```
 
+First video of a playlist can be played with the following link.
+This will redirect to the appropriate `/watch` page.
+```
+https://www.youtube.com/playlist?list=...&playnext=1
+```
+
 Playlists which do not contain any videos, like member-only on some channels
 will show a red error box saying `The playlist does not exist.` without redirect.
 Invalid lists (HTTP 404) will return the user to the YouTube homepage.
