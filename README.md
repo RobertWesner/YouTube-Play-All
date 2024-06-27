@@ -52,6 +52,8 @@ Shorts can be played both by latest and most popular.
 
 ![shorts.png](readme/shorts.png)
 
+### Live Streams
+![live.png](readme/live.png)
 
 ## Issues
 
