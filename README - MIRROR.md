@@ -56,7 +56,7 @@ Shorts can be played both by latest and most popular.
 
 ### Live Streams
 
-![live.png](readme/live.png)
+![live.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/live.png)
 
 
 ## Issues
