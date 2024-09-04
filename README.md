@@ -29,6 +29,7 @@ Available mirrors:
    - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
    - [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
 
+
 ## Usage
 
 Once installed, you should be able to see the vibrant Play-All button when visiting or navigating to the videos section of a YouTube channel.
@@ -38,6 +39,7 @@ It may take a few seconds for the button to be dynamically added.
 
 ![screenshot.png](readme/screenshot.png)
 ![screenshot_dark.png](readme/screenshot_dark.png)
+
 
 ### Playing Sorted By Most Popular
 
@@ -52,12 +54,16 @@ Shorts can be played both by latest and most popular.
 
 ![shorts.png](readme/shorts.png)
 
+
 ### Live Streams
+
 ![live.png](readme/live.png)
+
 
 ## Issues
 
 If your current installation does not work, please update it by following the installation steps above before opening issues.
+
 
 ## License
 
