@@ -196,12 +196,30 @@
         const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
         const getStorageKey = () => `ytpa-random-${urlParams.get('list')}`;
-        const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '[]');
+        const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
+
+        const isWatched = videoId => getStorage()[videoId] || false;
         const markWatched = videoId => {
-            localStorage.setItem(getStorageKey(), JSON.stringify([...getStorage(), videoId]));
+            localStorage.setItem(getStorageKey(), JSON.stringify({...getStorage(), [videoId]: true }));
             document.querySelectorAll('#wc-endpoint[href*=zsA3X40nz9w]').forEach(
                 element => element.parentElement.setAttribute('hidden', ''),
             );
+        };
+
+        // Storage needs to now be { [videoId]: bool }
+        try {
+            if (Array.isArray(getStorage())) {
+                localStorage.removeItem(getStorageKey());
+            }
+        } catch (e) {
+            localStorage.removeItem(getStorageKey());
+        }
+
+        const playNextRandom = () => {
+            const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
+            const params = new URLSearchParams(window.location.search);
+            params.set('v', videos[Math.floor(Math.random() * videos.length)][0]);
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
         };
 
         const applyRandomPlay = () => {
@@ -219,36 +237,28 @@
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
+
+            const storage = getStorage();
             playlistContainer.querySelectorAll('#wc-endpoint').forEach(element => {
+                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                if (!isWatched(videoId)) {
+                    storage[videoId] = false;
+                }
+
                 element.href += '&ytpa-random=1';
 
                 const entryKey= getVideoId(element.href);
-                if (getStorage().includes(entryKey)) {
+                if (isWatched(entryKey)) {
                     element.parentElement.setAttribute('hidden', '');
                 }
             });
+            localStorage.setItem(getStorageKey(), JSON.stringify(storage));
 
-            const playNextRandom = () => {
-                let videos = playlistContainer.querySelectorAll('ytd-playlist-panel-video-renderer:not([hidden]) #wc-endpoint');
-                // fallback to a random already watched video, will redirect again once loaded
-                // this happens due to the playlist widget only showing ~100 videos at once. may cause reload loops
-                // TODO: it would be a lot better to first fetch all videos and be truly random,
-                //       but that can be difficult, since YouTube saves bandwidth.
-                if (videos.length === 0) {
-                    videos = playlistContainer.querySelectorAll('#wc-endpoint');
-                }
-
-                // Due to YouTube providing the range (current - 20 -> current + 80) a pure random
-                // would favor going back further and further. This is prevented by limiting to the first 15.
-                window.location.href = videos[Math.floor(Math.random() * Math.min(15, videos.length))].href;
-            };
-
-            if (getStorage().includes(getVideoId(location.href))) {
+            if (isWatched(getVideoId(location.href))) {
                 playNextRandom();
 
                 return;
             }
-
 
             const header = playlistContainer.querySelector('h3 a');
             header.innerHTML += ' <span class="ytpa-badge ytpa-random-badge">random</span>'
