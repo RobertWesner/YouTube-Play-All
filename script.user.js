@@ -227,12 +227,16 @@
             const playNextRandom = () => {
                 let videos = playlistContainer.querySelectorAll('ytd-playlist-panel-video-renderer:not([hidden]) #wc-endpoint');
                 // fallback to a random already watched video, will redirect again once loaded
-                // TODO: this happens due to the playlist widget only showing ~100 videos at once. may cause reload loops
+                // this happens due to the playlist widget only showing ~100 videos at once. may cause reload loops
+                // TODO: it would be a lot better to first fetch all videos and be truly random,
+                //       but that can be difficult, since YouTube saves bandwidth.
                 if (videos.length === 0) {
                     videos = playlistContainer.querySelectorAll('#wc-endpoint');
                 }
 
-                window.location.href = videos[Math.floor(Math.random() * videos.length)].href;
+                // Due to YouTube providing the range (current - 20 -> current + 80) a pure random
+                // would favor going back further and further, this is prevented by limiting to the first 30.
+                window.location.href = videos[Math.floor(Math.random() * Math.min(30, videos.length))].href;
             };
 
             if (getStorage().includes(getVideoId(location.href))) {
@@ -278,6 +282,7 @@
                     nextButton.setAttribute('data-preview', '');
                     nextButton.setAttribute('data-tooltip-text', 'Random');
                     nextButton.setAttribute('ytpa-random', 'applied');
+                    // TODO: also listen for SHIFT + N ?
                     nextButton.addEventListener('click', event => {
                         event.preventDefault();
                         markWatched(videoId);
