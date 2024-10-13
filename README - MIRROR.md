@@ -47,6 +47,11 @@ When sorting by most popular, the button will take you to the "Popular videos" p
 ![popular.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/popular.png)
 
 
+### Playing Random
+
+It is possible to play all videos in random order by clicking the "Play Random"-button.
+
+
 ### Shorts
 
 Shorts can be played both by latest and most popular.
