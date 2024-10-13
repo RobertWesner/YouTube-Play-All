@@ -71,19 +71,6 @@
             background-color: #6192ee;
         }
         
-        .ytpa-delete-btn {
-            background-color: #e84642;
-            color: white;
-            padding: 0.5em;
-            font-size: 0.8em;
-            border-radius: 8px;
-            font-size: 0.6em;
-        }
-        
-        .ytpa-delete-btn:hover {
-            background-color: #ee6966;
-        }
-        
         /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
         .ytpa-play-all-btn ~ .ytpa-play-all-btn {
             display: none;
@@ -261,10 +248,9 @@
             }
 
             const header = playlistContainer.querySelector('h3 a');
-            header.innerHTML += ' <span class="ytpa-badge ytpa-random-badge">random</span>'
-                + ' <span class="ytpa-badge ytpa-delete-btn">🗑️</span>';
+            header.innerHTML += ' <span class="ytpa-badge ytpa-random-badge">random <span style="font-size: 2rem; vertical-align: top">&times;</span></span>';
             header.href = 'javascript:none';
-            header.querySelector('.ytpa-delete-btn').addEventListener('click', event => {
+            header.querySelector('.ytpa-random-badge').addEventListener('click', event => {
                 event.preventDefault();
 
                 localStorage.removeItem(getStorageKey());
