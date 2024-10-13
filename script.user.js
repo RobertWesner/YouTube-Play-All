@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241013-2
+// @version         20241013-3
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -239,8 +239,8 @@
                 }
 
                 // Due to YouTube providing the range (current - 20 -> current + 80) a pure random
-                // would favor going back further and further, this is prevented by limiting to the first 30.
-                window.location.href = videos[Math.floor(Math.random() * Math.min(30, videos.length))].href;
+                // would favor going back further and further. This is prevented by limiting to the first 15.
+                window.location.href = videos[Math.floor(Math.random() * Math.min(15, videos.length))].href;
             };
 
             if (getStorage().includes(getVideoId(location.href))) {
