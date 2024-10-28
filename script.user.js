@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241028-1-beta
+// @version         20241028-2-beta
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -211,8 +211,12 @@
             const params = new URLSearchParams(window.location.search);
             params.set('v', videos[Math.floor(Math.random() * videos.length)][0]);
             params.set('ytpa-random', '1');
+            params.delete('t');
+            params.delete('index');
             window.location.href = `${window.location.pathname}?${params.toString()}`;
         };
+
+        let isIntervalSet = false;
 
         const applyRandomPlay = () => {
             if (!window.location.pathname.endsWith('/watch')) {
@@ -271,6 +275,22 @@
                 window.location.href = `${window.location.pathname}?${params.toString()}`;
             });
 
+            document.addEventListener('keydown', event => {
+                if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                    event.stopPropagation();
+                    event.preventDefault();
+
+                    const videoId = getVideoId(location.href);
+                    markWatched(videoId);
+                    playNextRandom();
+                }
+            });
+
+            if (isIntervalSet) {
+                return;
+            }
+            isIntervalSet = true;
+
             setInterval(() => {
                 const videoId = getVideoId(location.href);
 
@@ -279,12 +299,19 @@
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
                 /**
-                 * @var {{ getProgressState: () => { current: number, duration, number } }} player
+                 * @var {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void }} player
                  */
                 const player = document.querySelector('#movie_player');
                 const progressState = player.getProgressState();
-                if (progressState.current / progressState.duration >= 0.999) {
+
+                if (progressState.current / progressState.duration >= 0.9) {
                     markWatched(videoId);
+                }
+
+                // Autoplay random video
+                if (progressState.current >= progressState.duration - 2) {
+                    // make sure vanilla autoplay doesnt take over
+                    player.pauseVideo();
                     playNextRandom();
                 }
 
@@ -293,7 +320,6 @@
                     nextButton.setAttribute('data-preview', '');
                     nextButton.setAttribute('data-tooltip-text', 'Random');
                     nextButton.setAttribute('ytpa-random', 'applied');
-                    // TODO: also listen for SHIFT + N ?
                     nextButton.addEventListener('click', event => {
                         event.preventDefault();
                         markWatched(videoId);
