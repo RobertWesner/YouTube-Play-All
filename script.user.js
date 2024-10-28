@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         2024-09-04.0
+// @version         20241028-1
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -11,13 +11,26 @@
 // ==/UserScript==
 
 /**
- * @var {{ createPolicy: (string, Object) => void }} window.trustedTypes
+ * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
+ */
+/**
+ * @var {{ script: { version: string } }} GM_info
  */
 
-(function () {
+(async function () {
     'use strict';
 
-    if (window.hasOwnProperty('trustedTypes')) {
+    const scriptVersion = GM_info.script.version || null;
+    if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
+        console.log(
+            '%cYTPA - YouTube Play All\n',
+            'color: #bf4bcc; font-size: 32px; font-weight: bold',
+            'You are currently running a test version:',
+            scriptVersion,
+        );
+    }
+
+    if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
 
@@ -131,4 +144,10 @@
         window.addEventListener('yt-navigate-start', removeButton);
         window.addEventListener('yt-navigate-finish', addButton);
     }
-})();
+})().catch(
+    error => console.error(
+        '%cYTPA - YouTube Play All\n',
+        'color: #bf4bcc; font-size: 32px; font-weight: bold',
+        error,
+    )
+);
