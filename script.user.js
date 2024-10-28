@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241013-5
+// @version         20241028-0-beta
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -16,6 +16,8 @@
 /**
  * @var {{ script: { version: string } }} GM_info
  */
+
+// TODO: before full release, test (and fix) mobile play random
 
 (async function () {
     'use strict';
@@ -72,7 +74,8 @@
         }
         
         /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
-        .ytpa-play-all-btn ~ .ytpa-play-all-btn {
+        .ytpa-play-all-btn ~ .ytpa-play-all-btn,
+        .ytpa-random-btn ~ .ytpa-random-btn {
             display: none;
         }
         
@@ -173,6 +176,7 @@
         window.addEventListener('yt-navigate-finish', addButton);
     }
 
+    // Random play feature
     (() => {
         const urlParams = new URLSearchParams(window.location.search);
 
@@ -302,4 +306,10 @@
 
         setInterval(applyRandomPlay, 1000);
     })();
-})();
+})().catch(
+    error => console.error(
+        '%cYTPA - YouTube Play All\n',
+        'color: #bf4bcc; font-size: 32px; font-weight: bold',
+        error,
+    )
+);
