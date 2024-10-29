@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241028-2-beta
+// @version         20241029-0-beta
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -64,7 +64,7 @@
             background-color: #d264de;
         }
         
-        .ytpa-random-btn, .ytpa-random-badge {
+        .ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice {
             background-color: #2b66da;
             color: white;
         }
@@ -85,8 +85,23 @@
             padding: 0.4em;
         }
         
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button {
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([data-tooltip-text="Random"]) {
             display: none !important;
+        }
+        
+        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+            height: 1em;
+            visibility: hidden;
+        }
+        
+        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+            filter: blur(2em);
+        }
+
+        .ytpa-random-notice {
+            padding: 1em;
+            z-index: 1000;
         }
     </style>`);
 
@@ -119,7 +134,7 @@
                         ? `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
                         : `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1">Play All</a>`
                 }
-                <a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=1">Play Random</a>
+                <a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=initial">Play Random</a>
             `,
         );
     };
@@ -227,12 +242,17 @@
             if (playlistContainer === null) {
                 return;
             }
-
             if (playlistContainer.hasAttribute('ytpa-random')) {
                 return;
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
+            playlistContainer.querySelector('.header').insertAdjacentHTML('afterend', `
+                <div class="ytpa-random-notice">
+                    This playlist is using random play.<br>
+                    The videos will <strong>not be played in the order</strong> listed here.
+                </div>
+            `)
 
             const storage = getStorage();
             playlistContainer.querySelectorAll('#wc-endpoint').forEach(element => {
@@ -256,7 +276,7 @@
             });
             localStorage.setItem(getStorageKey(), JSON.stringify(storage));
 
-            if (isWatched(getVideoId(location.href))) {
+            if (urlParams.get('ytpa-random') === 'initial' || isWatched(getVideoId(location.href))) {
                 playNextRandom();
 
                 return;
@@ -299,20 +319,23 @@
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
                 /**
-                 * @var {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void }} player
+                 * @var {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, isLifaAdPlaying: () => boolean }} player
                  */
                 const player = document.querySelector('#movie_player');
                 const progressState = player.getProgressState();
 
-                if (progressState.current / progressState.duration >= 0.9) {
-                    markWatched(videoId);
-                }
+                // Do not listen for watch progress when watching advertisements
+                if (!player.isLifaAdPlaying()) {
+                    if (progressState.current / progressState.duration >= 0.9) {
+                        markWatched(videoId);
+                    }
 
-                // Autoplay random video
-                if (progressState.current >= progressState.duration - 2) {
-                    // make sure vanilla autoplay doesnt take over
-                    player.pauseVideo();
-                    playNextRandom();
+                    // Autoplay random video
+                    if (progressState.current >= progressState.duration - 2) {
+                        // make sure vanilla autoplay doesnt take over
+                        player.pauseVideo();
+                        playNextRandom();
+                    }
                 }
 
                 const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button');
