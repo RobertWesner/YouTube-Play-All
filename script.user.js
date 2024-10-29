@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241029-0-beta
+// @version         20241029-1-beta
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -16,8 +16,6 @@
 /**
  * @var {{ script: { version: string } }} GM_info
  */
-
-// TODO: before full release, test (and fix) mobile play random
 
 (async function () {
     'use strict';
@@ -80,8 +78,9 @@
         }
         
         /* Fix for mobile view */
-        ytm-feed-filter-chip-bar-renderer .ytpa-play-all-btn {
+        ytm-feed-filter-chip-bar-renderer .ytpa-btn {
             margin-left: 0;
+            margin-right: 12px;
             padding: 0.4em;
         }
         
@@ -112,6 +111,9 @@
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
             : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
+        if (!parent) {
+            return;
+        }
 
         // See: available-lists.md
         let [allPlaylist, popularPlaylist] = window.location.pathname.endsWith('/videos')
@@ -125,18 +127,33 @@
                 // Live streams
                 : ['UULV', 'UUPV'];
 
-        parent.insertAdjacentHTML(
-            'beforeend',
-            // Check if popular videos are displayed
-            `
-                ${
-                    parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
-                        ? `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
-                        : `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1">Play All</a>`
-                }
-                <a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=initial">Play Random</a>
-            `,
-        );
+        // Check if popular videos are displayed
+        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
+            );
+        } else {
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1">Play All</a>`
+            );
+        }
+
+        if (location.host === 'm.youtube.com') {
+            // YouTube returns an "invalid response" when using client side routing for playnext=1 on mobile
+            document.querySelectorAll('.ytpa-btn').forEach(btn => btn.addEventListener('click', event => {
+                event.preventDefault();
+
+                window.location.href = btn.href;
+            }));
+        } else {
+            // Only allow random play in desktop version for now
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=initial">Play Random</a>`
+            );
+        }
     };
 
     const observer = new MutationObserver(apply);
@@ -193,6 +210,11 @@
 
     // Random play feature
     (() => {
+        // Random play is not supported for mobile devices
+        if (location.host === 'm.youtube.com') {
+            return;
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
 
         if (!urlParams.has('ytpa-random') || urlParams.get('ytpa-random') === '0') {
