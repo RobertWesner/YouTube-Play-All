@@ -6,7 +6,7 @@
 // @license         MIT
 // @namespace       http://robert.wesner.io/
 // @match           https://*.youtube.com/*
-// @icon            https://www.google.com/s2/favicons?sz=64&domain=youtube.com
+// @icon            https://scripts.yt/favicon.ico
 // @grant           none
 // ==/UserScript==
 
@@ -43,7 +43,30 @@
             font-weight: 500;
             padding: 0.5em;
             margin-left: 0.6em;
+            user-select: none;
+        }
+        
+        .ytpa-btn, .ytpa-btn > * {
             text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .ytpa-btn-sections {
+            padding: 0;
+        }
+        
+        .ytpa-btn-sections > .ytpa-btn-section {
+            padding: 0.5em;
+        }
+
+        .ytpa-btn-sections > .ytpa-btn-section:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
         }
         
         .ytpa-badge {
@@ -62,15 +85,42 @@
             background-color: #d264de;
         }
         
-        .ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice {
+        .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover > * {
             background-color: #2b66da;
             color: white;
         }
 
-        .ytpa-random-btn:hover {
+        .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
             background-color: #6192ee;
         }
         
+        .ytpa-random-popover {
+            position: absolute;
+            border-radius: 8px;
+            font-size: 1.6rem;
+            transform: translate(-100%, 0.4em);
+        }
+        
+        .ytpa-random-popover > * {
+            display: block;
+            text-decoration: none;
+            padding: 0.4em;
+        }
+        
+        .ytpa-random-popover > :first-child {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+        
+        .ytpa-random-popover > :last-child {
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+    
+        .ytpa-random-popover > *:not(:last-child) {
+            border-bottom: 1px solid #6e8dbb;
+        }
+    
         .ytpa-button-container {
             display: flex;
             width: 100%;
@@ -164,10 +214,39 @@
             }));
         } else {
             // Only allow random play in desktop version for now
-            parent.insertAdjacentHTML(
-                'beforeend',
-                `<a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=initial">Play Random</a>`
-            );
+            parent.insertAdjacentHTML('beforeend', `
+                <span class="ytpa-btn ytpa-random-btn ytpa-btn-sections">
+                    <a class="ytpa-btn-section" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1">
+                        Play Random
+                    </a>
+                    <span class="ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover">
+                        &#x25BE
+                    </span>
+                </span>
+            `);
+
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="ytpa-random-popover" hidden="">
+                    <a href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest">
+                        Prefer newest
+                    </a>
+                    <a href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1">
+                        Prefer oldest
+                    </a>
+                </div>
+            `);
+
+            const randomMoreOptionsBtn = document.querySelector('.ytpa-random-more-options-btn');
+            const randomPopover = document.querySelector('.ytpa-random-popover');
+            randomMoreOptionsBtn.addEventListener('click', () => {
+                const rect = randomMoreOptionsBtn.getBoundingClientRect();
+                randomPopover.style.top = rect.bottom.toString() + 'px';
+                randomPopover.style.left = rect.right.toString() + 'px';
+                randomPopover.removeAttribute('hidden');
+            });
+            randomPopover.addEventListener('mouseleave', () => {
+                randomPopover.setAttribute('hidden', '');
+            });
         }
     };
 
@@ -206,13 +285,7 @@
 
     // Removing the button prevents it from still existing when switching between "Videos", "Shorts", and "Live"
     // This is necessary due to the mobile Interval requiring a check for an already existing button
-    const removeButton = () => {
-        const button = document.querySelector('.ytpa-play-all-btn');
-
-        if (button) {
-            button.remove();
-        }
-    };
+    const removeButton = () => document.querySelectorAll('.ytpa-btn').forEach(element => element.remove());
 
     if (location.host === 'm.youtube.com') {
         // The "yt-navigate-finish" event does not fire on mobile
@@ -235,6 +308,11 @@
         if (!urlParams.has('ytpa-random') || urlParams.get('ytpa-random') === '0') {
             return;
         }
+
+        /**
+         * @type {'random'|'prefer-newest'|'prefer-oldest'}
+         */
+        const ytpaRandom = urlParams.get('ytpa-random');
 
         const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -261,10 +339,31 @@
         const playNextRandom = () => {
             const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
             const params = new URLSearchParams(window.location.search);
-            params.set('v', videos[Math.floor(Math.random() * videos.length)][0]);
-            params.set('ytpa-random', '1');
+
+            // Either one fifth or at most the 20 newest.
+            const preferenceRange = Math.min(Math.min(videos.length * 0.2, 20))
+
+            let videoIndex;
+            switch (ytpaRandom) {
+                case 'prefer-newest':
+                    // Select between latest 20 videos
+                    videoIndex = Math.floor(Math.random() * preferenceRange);
+
+                    break;
+                case 'prefer-oldest':
+                    // Select between oldest 20 videos
+                    videoIndex = videos.length - Math.floor(Math.random() * preferenceRange);
+
+                    break;
+                default:
+                    videoIndex = Math.floor(Math.random() * videos.length);
+            }
+
+            params.set('v', videos[videoIndex][0]);
+            params.set('ytpa-random', ytpaRandom);
             params.delete('t');
             params.delete('index');
+            params.delete('ytpa-random-initial');
             window.location.href = `${window.location.pathname}?${params.toString()}`;
         };
 
@@ -298,7 +397,7 @@
                     storage[videoId] = false;
                 }
 
-                element.href += '&ytpa-random=1';
+                element.href += '&ytpa-random=' + ytpaRandom;
                 // This bypasses the client side routing
                 element.addEventListener('click', event => {
                     event.preventDefault();
@@ -313,14 +412,14 @@
             });
             localStorage.setItem(getStorageKey(), JSON.stringify(storage));
 
-            if (urlParams.get('ytpa-random') === 'initial' || isWatched(getVideoId(location.href))) {
+            if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
                 playNextRandom();
 
                 return;
             }
 
             const header = playlistContainer.querySelector('h3 a');
-            header.innerHTML += ' <span class="ytpa-badge ytpa-random-badge">random <span style="font-size: 2rem; vertical-align: top">&times;</span></span>';
+            header.innerHTML += ` <span class="ytpa-badge ytpa-random-badge">${ytpaRandom} <span style="font-size: 2rem; vertical-align: top">&times;</span></span>`;
             header.href = 'javascript:none';
             header.querySelector('.ytpa-random-badge').addEventListener('click', event => {
                 event.preventDefault();
@@ -352,7 +451,7 @@
                 const videoId = getVideoId(location.href);
 
                 let params = new URLSearchParams(location.search);
-                params.set('ytpa-random', '1');
+                params.set('ytpa-random', ytpaRandom);
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
                 /**
@@ -375,8 +474,8 @@
                     }
                 }
 
-                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button');
-                if (nextButton && !nextButton.hasAttribute('ytpa-random')) {
+                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button:not([data-tooltip-text="Random"])');
+                if (nextButton) {
                     nextButton.setAttribute('data-preview', '');
                     nextButton.setAttribute('data-tooltip-text', 'Random');
                     nextButton.setAttribute('ytpa-random', 'applied');
