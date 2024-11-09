@@ -5,7 +5,7 @@
     <a href="#issues">Issues</a> |
     <a href="#license">License</a>
     <p>
-        A tiny userscript adding the Play-All button back to YouTube.
+        <strong>YTPA</strong>: A tiny userscript adding the Play-All button back to YouTube.
     </p>
 </div>
 
@@ -46,6 +46,11 @@ It may take a few seconds for the button to be dynamically added.
 When sorting by most popular, the button will take you to the "Popular videos" playlist.
 
 ![popular.png](readme/popular.png)
+
+
+### Playing Random
+
+It is possible to play all videos in random order by clicking the "Play Random"-button.
 
 
 ### Shorts

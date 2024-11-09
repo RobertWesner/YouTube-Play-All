@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241028-1
+// @version         20241029-1-beta
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -35,10 +35,8 @@
     }
 
     document.head.insertAdjacentHTML('beforeend', `<style>
-        .play-all-button {
+        .ytpa-btn {
             border-radius: 8px;
-            background-color: #bf4bcc;
-            color: white;
             font-family: 'Roboto', 'Arial', sans-serif;
             font-size: 1.4rem;
             line-height: 2rem;
@@ -47,20 +45,62 @@
             margin-left: 0.6em;
             text-decoration: none;
         }
+        
+        .ytpa-badge {
+            border-radius: 8px;
+            padding: 0.2em;
+            font-size: 0.8em;
+            vertical-align: top;
+        }
 
-        .play-all-button:hover {
+        .ytpa-play-all-btn {
+            background-color: #bf4bcc;
+            color: white;
+        }
+
+        .ytpa-play-all-btn:hover {
             background-color: #d264de;
         }
         
+        .ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice {
+            background-color: #2b66da;
+            color: white;
+        }
+
+        .ytpa-random-btn:hover {
+            background-color: #6192ee;
+        }
+        
         /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
-        .play-all-button ~ .play-all-button {
+        .ytpa-play-all-btn ~ .ytpa-play-all-btn,
+        .ytpa-random-btn ~ .ytpa-random-btn {
             display: none;
         }
         
         /* Fix for mobile view */
-        ytm-feed-filter-chip-bar-renderer .play-all-button {
+        ytm-feed-filter-chip-bar-renderer .ytpa-btn {
             margin-left: 0;
+            margin-right: 12px;
             padding: 0.4em;
+        }
+        
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([data-tooltip-text="Random"]) {
+            display: none !important;
+        }
+        
+        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+            height: 1em;
+            visibility: hidden;
+        }
+        
+        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+            filter: blur(2em);
+        }
+
+        .ytpa-random-notice {
+            padding: 1em;
+            z-index: 1000;
         }
     </style>`);
 
@@ -71,6 +111,9 @@
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
             : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
+        if (!parent) {
+            return;
+        }
 
         // See: available-lists.md
         let [allPlaylist, popularPlaylist] = window.location.pathname.endsWith('/videos')
@@ -84,13 +127,33 @@
                 // Live streams
                 : ['UULV', 'UUPV'];
 
-        parent.insertAdjacentHTML(
-            'beforeend',
-            // Check if popular videos are displayed
-            parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')
-                ? `<a class="play-all-button" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
-                : `<a class="play-all-button" href="/playlist?&list=${allPlaylist}${id}&playnext=1">Play All</a>`,
-        );
+        // Check if popular videos are displayed
+        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
+            );
+        } else {
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1">Play All</a>`
+            );
+        }
+
+        if (location.host === 'm.youtube.com') {
+            // YouTube returns an "invalid response" when using client side routing for playnext=1 on mobile
+            document.querySelectorAll('.ytpa-btn').forEach(btn => btn.addEventListener('click', event => {
+                event.preventDefault();
+
+                window.location.href = btn.href;
+            }));
+        } else {
+            // Only allow random play in desktop version for now
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-random-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=initial">Play Random</a>`
+            );
+        }
     };
 
     const observer = new MutationObserver(apply);
@@ -102,7 +165,7 @@
         }
 
         // This check is necessary for the mobile Interval
-        if (document.querySelector('.play-all-button')) {
+        if (document.querySelector('.ytpa-play-all-btn')) {
             return;
         }
 
@@ -129,7 +192,7 @@
     // Removing the button prevents it from still existing when switching between "Videos", "Shorts", and "Live"
     // This is necessary due to the mobile Interval requiring a check for an already existing button
     const removeButton = () => {
-        const button = document.querySelector('.play-all-button');
+        const button = document.querySelector('.ytpa-play-all-btn');
 
         if (button) {
             button.remove();
@@ -144,6 +207,176 @@
         window.addEventListener('yt-navigate-start', removeButton);
         window.addEventListener('yt-navigate-finish', addButton);
     }
+
+    // Random play feature
+    (() => {
+        // Random play is not supported for mobile devices
+        if (location.host === 'm.youtube.com') {
+            return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+
+        if (!urlParams.has('ytpa-random') || urlParams.get('ytpa-random') === '0') {
+            return;
+        }
+
+        const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
+
+        const getStorageKey = () => `ytpa-random-${urlParams.get('list')}`;
+        const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
+
+        const isWatched = videoId => getStorage()[videoId] || false;
+        const markWatched = videoId => {
+            localStorage.setItem(getStorageKey(), JSON.stringify({...getStorage(), [videoId]: true }));
+            document.querySelectorAll('#wc-endpoint[href*=zsA3X40nz9w]').forEach(
+                element => element.parentElement.setAttribute('hidden', ''),
+            );
+        };
+
+        // Storage needs to now be { [videoId]: bool }
+        try {
+            if (Array.isArray(getStorage())) {
+                localStorage.removeItem(getStorageKey());
+            }
+        } catch (e) {
+            localStorage.removeItem(getStorageKey());
+        }
+
+        const playNextRandom = () => {
+            const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
+            const params = new URLSearchParams(window.location.search);
+            params.set('v', videos[Math.floor(Math.random() * videos.length)][0]);
+            params.set('ytpa-random', '1');
+            params.delete('t');
+            params.delete('index');
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        };
+
+        let isIntervalSet = false;
+
+        const applyRandomPlay = () => {
+            if (!window.location.pathname.endsWith('/watch')) {
+                return;
+            }
+
+            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer');
+            if (playlistContainer === null) {
+                return;
+            }
+            if (playlistContainer.hasAttribute('ytpa-random')) {
+                return;
+            }
+
+            playlistContainer.setAttribute('ytpa-random', 'applied');
+            playlistContainer.querySelector('.header').insertAdjacentHTML('afterend', `
+                <div class="ytpa-random-notice">
+                    This playlist is using random play.<br>
+                    The videos will <strong>not be played in the order</strong> listed here.
+                </div>
+            `)
+
+            const storage = getStorage();
+            playlistContainer.querySelectorAll('#wc-endpoint').forEach(element => {
+                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                if (!isWatched(videoId)) {
+                    storage[videoId] = false;
+                }
+
+                element.href += '&ytpa-random=1';
+                // This bypasses the client side routing
+                element.addEventListener('click', event => {
+                    event.preventDefault();
+
+                    window.location.href = element.href;
+                });
+
+                const entryKey= getVideoId(element.href);
+                if (isWatched(entryKey)) {
+                    element.parentElement.setAttribute('hidden', '');
+                }
+            });
+            localStorage.setItem(getStorageKey(), JSON.stringify(storage));
+
+            if (urlParams.get('ytpa-random') === 'initial' || isWatched(getVideoId(location.href))) {
+                playNextRandom();
+
+                return;
+            }
+
+            const header = playlistContainer.querySelector('h3 a');
+            header.innerHTML += ' <span class="ytpa-badge ytpa-random-badge">random <span style="font-size: 2rem; vertical-align: top">&times;</span></span>';
+            header.href = 'javascript:none';
+            header.querySelector('.ytpa-random-badge').addEventListener('click', event => {
+                event.preventDefault();
+
+                localStorage.removeItem(getStorageKey());
+
+                let params = new URLSearchParams(location.search);
+                params.delete('ytpa-random');
+                window.location.href = `${window.location.pathname}?${params.toString()}`;
+            });
+
+            document.addEventListener('keydown', event => {
+                if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                    event.stopPropagation();
+                    event.preventDefault();
+
+                    const videoId = getVideoId(location.href);
+                    markWatched(videoId);
+                    playNextRandom();
+                }
+            });
+
+            if (isIntervalSet) {
+                return;
+            }
+            isIntervalSet = true;
+
+            setInterval(() => {
+                const videoId = getVideoId(location.href);
+
+                let params = new URLSearchParams(location.search);
+                params.set('ytpa-random', '1');
+                window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+
+                /**
+                 * @var {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, isLifaAdPlaying: () => boolean }} player
+                 */
+                const player = document.querySelector('#movie_player');
+                const progressState = player.getProgressState();
+
+                // Do not listen for watch progress when watching advertisements
+                if (!player.isLifaAdPlaying()) {
+                    if (progressState.current / progressState.duration >= 0.9) {
+                        markWatched(videoId);
+                    }
+
+                    // Autoplay random video
+                    if (progressState.current >= progressState.duration - 2) {
+                        // make sure vanilla autoplay doesnt take over
+                        player.pauseVideo();
+                        playNextRandom();
+                    }
+                }
+
+                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button');
+                if (nextButton && !nextButton.hasAttribute('ytpa-random')) {
+                    nextButton.setAttribute('data-preview', '');
+                    nextButton.setAttribute('data-tooltip-text', 'Random');
+                    nextButton.setAttribute('ytpa-random', 'applied');
+                    nextButton.addEventListener('click', event => {
+                        event.preventDefault();
+                        markWatched(videoId);
+
+                        playNextRandom();
+                    });
+                }
+            }, 1000);
+        };
+
+        setInterval(applyRandomPlay, 1000);
+    })();
 })().catch(
     error => console.error(
         '%cYTPA - YouTube Play All\n',
