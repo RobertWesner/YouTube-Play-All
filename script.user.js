@@ -71,6 +71,17 @@
             background-color: #6192ee;
         }
         
+        .ytpa-button-container {
+            display: flex;
+            width: 100%;
+            margin-top: 1em;
+            margin-bottom: -1em;
+        }
+
+        ytd-rich-grid-renderer .ytpa-button-container > :first-child {
+            margin-left: 0;
+        }
+        
         /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
         .ytpa-play-all-btn ~ .ytpa-play-all-btn,
         .ytpa-random-btn ~ .ytpa-random-btn {
@@ -111,8 +122,12 @@
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
             : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
-        if (!parent) {
-            return;
+
+        // #5: add a custom container for buttons if Latest/Popular/Oldest is missing
+        if (parent === null) {
+            const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer');
+            grid.insertAdjacentHTML('afterbegin', '<div class="ytpa-button-container"></div>');
+            parent = grid.querySelector('.ytpa-button-container');
         }
 
         // See: available-lists.md
