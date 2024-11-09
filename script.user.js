@@ -397,7 +397,7 @@
                     storage[videoId] = false;
                 }
 
-                element.href += '&ytpa-random=' . ytpaRandom;
+                element.href += '&ytpa-random=' + ytpaRandom;
                 // This bypasses the client side routing
                 element.addEventListener('click', event => {
                     event.preventDefault();
