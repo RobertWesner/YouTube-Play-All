@@ -310,7 +310,7 @@
         }
 
         /**
-         * @type {'1'|'prefer-newest'|'prefer-oldest'}
+         * @type {'random'|'prefer-newest'|'prefer-oldest'}
          */
         const ytpaRandom = urlParams.get('ytpa-random');
 
