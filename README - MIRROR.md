@@ -15,6 +15,8 @@ I got frustrated from not being able to binge-watch some YouTube channels. Unabl
 
 Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube.
 
+Now with support for **Random Play**!
+
 > The [GitHub Version](https://github.com/RobertWesner/YouTube-Play-All) takes priority and
 > might be updated before this mirror is. Make sure to check there for newer versions.
 
@@ -47,6 +49,11 @@ When sorting by most popular, the button will take you to the "Popular videos" p
 ![popular.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/popular.png)
 
 
+### Playing Random
+
+It is possible to play all videos in random order by clicking the "Play Random"-button.
+
+
 ### Shorts
 
 Shorts can be played both by latest and most popular.
@@ -57,6 +64,17 @@ Shorts can be played both by latest and most popular.
 ### Live Streams
 
 ![live.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/live.png)
+
+
+### Play Random
+
+It is now possible to play by random on desktop devices.
+
+![play_random.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/play_random.png)
+
+Optionally with custom shuffle priority (select by clicking `▾`).
+
+![play_random_custom.png](https://github.com/RobertWesner/YouTube-Play-All/raw/main/readme/play_random_custom.png)
 
 
 ## Issues

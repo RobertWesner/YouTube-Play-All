@@ -5,7 +5,7 @@
     <a href="#issues">Issues</a> |
     <a href="#license">License</a>
     <p>
-        A tiny userscript adding the Play-All button back to YouTube.
+        <strong>YTPA</strong>: A tiny userscript adding the Play-All button back to YouTube.
     </p>
 </div>
 
@@ -13,7 +13,9 @@
 
 I got frustrated from not being able to binge-watch some YouTube channels. Unable to find a working userscript, I created this. Hopefully, it will be as useful to you as it is to me.
 
-Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube. 
+Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube.
+
+Now with support for **Random Play**!
 
 ## Installation
 
@@ -48,6 +50,11 @@ When sorting by most popular, the button will take you to the "Popular videos" p
 ![popular.png](readme/popular.png)
 
 
+### Playing Random
+
+It is possible to play all videos in random order by clicking the "Play Random"-button.
+
+
 ### Shorts
 
 Shorts can be played both by latest and most popular.
@@ -58,6 +65,17 @@ Shorts can be played both by latest and most popular.
 ### Live Streams
 
 ![live.png](readme/live.png)
+
+
+### Play Random
+
+It is now possible to play by random on desktop devices.
+
+![play_random.png](readme/play_random.png)
+
+Optionally with custom shuffle priority (select by clicking `▾`).
+
+![play_random_custom.png](readme/play_random_custom.png)
 
 
 ## Issues
