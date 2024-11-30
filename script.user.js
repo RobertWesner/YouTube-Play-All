@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20241109-0
+// @version         20241130-0-test
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -20,6 +20,14 @@
 (async function () {
     'use strict';
 
+    try {
+
+    const debug = text => {
+        console.log(`YTPA[DEBUG]:${text}`);
+    };
+
+    debug('Script started.');
+
     const scriptVersion = GM_info.script.version || null;
     if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
         console.log(
@@ -33,6 +41,8 @@
     if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
+
+    debug('Trusted Type created.');
 
     document.head.insertAdjacentHTML('beforeend', `<style>
         .ytpa-btn {
@@ -165,8 +175,13 @@
         }
     </style>`);
 
+
+    debug('CSS set up.');
+
     let id;
     const apply = () => {
+        debug('Begin apply.');
+
         let parent = location.host === 'm.youtube.com'
             // mobile view
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer > div')
@@ -247,12 +262,15 @@
             randomPopover.addEventListener('mouseleave', () => {
                 randomPopover.setAttribute('hidden', '');
             });
+
+            debug('Finish apply.');
         }
     };
 
     const observer = new MutationObserver(apply);
     const addButton = async () => {
         observer.disconnect();
+        debug('Begin addButton.');
 
         if (!(window.location.pathname.endsWith('/videos') || window.location.pathname.endsWith('/shorts') || window.location.pathname.endsWith('/streams'))) {
             return;
@@ -281,6 +299,8 @@
             childList: false,
             subtree: false
         });
+
+        debug('Finish addButton.');
     };
 
     // Removing the button prevents it from still existing when switching between "Videos", "Shorts", and "Live"
@@ -298,6 +318,8 @@
 
     // Random play feature
     (() => {
+        debug('Random Play.');
+
         // Random play is not supported for mobile devices
         if (location.host === 'm.youtube.com') {
             return;
@@ -491,8 +513,13 @@
 
         setInterval(applyRandomPlay, 1000);
     })();
+
+    } catch (e) {
+        console.log('/!\\ CAUGHT ERROR /!\\', e)
+    }
 })().catch(
-    error => console.error(
+    error =>
+        console.log('/!\\ ERROR /!\\', error) || console.error(
         '%cYTPA - YouTube Play All\n',
         'color: #bf4bcc; font-size: 32px; font-weight: bold',
         error,
