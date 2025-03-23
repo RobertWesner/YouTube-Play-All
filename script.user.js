@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250325-1
+// @version         20250325-2
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -331,6 +331,8 @@
          */
         const getPlayer = () => document.querySelector('#movie_player');
 
+        const isAdPlaying = () => !!document.querySelector('.ad-interrupting');
+
         // Storage needs to now be { [videoId]: bool }
         try {
             if (Array.isArray(getStorage())) {
@@ -484,7 +486,7 @@
                 const progressState = player.getProgressState();
 
                 // Do not listen for watch progress when watching advertisements
-                if (!player.isLifaAdPlaying()) {
+                if (!isAdPlaying()) {
                     if (progressState.current / progressState.duration >= 0.9) {
                         markWatched(videoId);
                     }
