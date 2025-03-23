@@ -25,7 +25,9 @@ Now with support for **Random Play**!
    - [Edge](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)<br>
    - [Opera](https://addons.opera.com/en/extensions/details/tampermonkey-beta/)<br>
 
-2. Install this userscript by clicking [this link](../../raw/main/script.user.js).
+2. On **Chrome**, **Edge**, **Opera**, and **OperaGX** make sure to [enable developer mode](https://www.tampermonkey.net/faq.php#Q209).
+
+3. Install this userscript by clicking [this link](../../raw/main/script.user.js).
 
 Available mirrors:
    - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
@@ -39,8 +41,8 @@ Simply clicking it or opening the link in a new tab will send you to the newest 
 
 It may take a few seconds for the button to be dynamically added.
 
-![screenshot.png](readme/screenshot.png)
-![screenshot_dark.png](readme/screenshot_dark.png)
+![screenshot.png](./readme/screenshot.png)
+![screenshot_dark.png](./readme/screenshot_dark.png)
 
 
 ### Playing Sorted By Most Popular
@@ -59,23 +61,23 @@ It is possible to play all videos in random order by clicking the "Play Random"-
 
 Shorts can be played both by latest and most popular.
 
-![shorts.png](readme/shorts.png)
+![shorts.png](./readme/shorts.png)
 
 
 ### Live Streams
 
-![live.png](readme/live.png)
+![live.png](./readme/live.png)
 
 
 ### Play Random
 
 It is now possible to play by random on desktop devices.
 
-![play_random.png](readme/play_random.png)
+![play_random.png](./readme/play_random.png)
 
 Optionally with custom shuffle priority (select by clicking `▾`).
 
-![play_random_custom.png](readme/play_random_custom.png)
+![play_random_custom.png](./readme/play_random_custom.png)
 
 
 ## Issues
