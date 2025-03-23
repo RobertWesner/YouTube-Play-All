@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250325-0
+// @version         20250325-1
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -145,7 +145,7 @@
         }
         
         body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([data-tooltip-text="Random"]) {
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
             display: none !important;
         }
         
@@ -326,6 +326,11 @@
             );
         };
 
+        /**
+         * @return {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, isLifaAdPlaying: () => boolean }} player
+         */
+        const getPlayer = () => document.querySelector('#movie_player');
+
         // Storage needs to now be { [videoId]: bool }
         try {
             if (Array.isArray(getStorage())) {
@@ -335,7 +340,9 @@
             localStorage.removeItem(getStorageKey());
         }
 
-        const playNextRandom = () => {
+        const playNextRandom = (reload = false) => {
+            getPlayer().pauseVideo()
+
             const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
             const params = new URLSearchParams(window.location.search);
 
@@ -358,12 +365,33 @@
                     videoIndex = Math.floor(Math.random() * videos.length);
             }
 
-            params.set('v', videos[videoIndex][0]);
-            params.set('ytpa-random', ytpaRandom);
-            params.delete('t');
-            params.delete('index');
-            params.delete('ytpa-random-initial');
-            window.location.href = `${window.location.pathname}?${params.toString()}`;
+            if (reload) {
+                params.set('v', videos[videoIndex][0]);
+                params.set('ytpa-random', ytpaRandom);
+                params.delete('t');
+                params.delete('index');
+                params.delete('ytpa-random-initial');
+                window.location.href = `${window.location.pathname}?${params.toString()}`;
+            } else {
+                const redirector = document.createElement('a');
+                redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
+                redirector.setAttribute('hidden', '');
+                redirector.data = {
+                    'commandMetadata': {
+                        'webCommandMetadata': {
+                            'url': `/watch?v=${videos[videoIndex][0]}&list=${params.get('list')}&ytpa-random=${ytpaRandom}`,
+                            'webPageType': 'WEB_PAGE_TYPE_WATCH',
+                            'rootVe': 3832, // ??? required though
+                        }
+                    },
+                    'watchEndpoint': {
+                        'videoId': videos[videoIndex][0],
+                        'playlistId': params.get('list'),
+                    }
+                };
+                document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
+                redirector.click();
+            }
         };
 
         let isIntervalSet = false;
@@ -431,13 +459,12 @@
             });
 
             document.addEventListener('keydown', event => {
+                // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
-                    event.stopPropagation();
-                    event.preventDefault();
-
                     const videoId = getVideoId(location.href);
                     markWatched(videoId);
-                    playNextRandom();
+                    // Unfortunately there is no workaround to YouTube redirecting to the next in line without a reload
+                    playNextRandom(true);
                 }
             });
 
@@ -453,10 +480,7 @@
                 params.set('ytpa-random', ytpaRandom);
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
-                /**
-                 * @var {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, isLifaAdPlaying: () => boolean }} player
-                 */
-                const player = document.querySelector('#movie_player');
+                const player = getPlayer();
                 const progressState = player.getProgressState();
 
                 // Do not listen for watch progress when watching advertisements
@@ -473,15 +497,17 @@
                     }
                 }
 
-                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button:not([data-tooltip-text="Random"])');
+                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button:not([ytpa-random="applied"])');
                 if (nextButton) {
-                    nextButton.setAttribute('data-preview', '');
-                    nextButton.setAttribute('data-tooltip-text', 'Random');
-                    nextButton.setAttribute('ytpa-random', 'applied');
-                    nextButton.addEventListener('click', event => {
-                        event.preventDefault();
-                        markWatched(videoId);
+                    // Replace with span to prevent anchor click events
+                    const newButton = document.createElement('span');
+                    newButton.className = nextButton.className;
+                    newButton.innerHTML = nextButton.innerHTML;
+                    nextButton.replaceWith(newButton);
 
+                    newButton.setAttribute('ytpa-random', 'applied');
+                    newButton.addEventListener('click', event => {
+                        markWatched(videoId);
                         playNextRandom();
                     });
                 }
