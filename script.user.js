@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250325-2
+// @version         20250504-0-dev
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
 // @match           https://*.youtube.com/*
 // @icon            https://scripts.yt/favicon.ico
-// @grant           none
+// @grant           GM.xmlHttpRequest
 // ==/UserScript==
 
 /**
@@ -162,7 +162,102 @@
             padding: 1em;
             z-index: 1000;
         }
+        
+        .ytpa-playlist-emulator {
+            margin-bottom: 1.6rem;
+            border-radius: 1rem;
+        }
+        
+        .ytpa-playlist-emulator > .title {
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            font-size: 2rem;
+            background-color: #323232;
+            color: white;
+            padding: 0.8rem;
+        }
+        
+        .ytpa-playlist-emulator > .information {
+            font-size: 1rem;
+            background-color: #2b2a2a;
+            color: white;
+            padding: 0.8rem;
+        }
+        
+        .ytpa-playlist-emulator > .footer {
+            border-bottom-left-radius: 1rem;
+            border-bottom-right-radius: 1rem;
+            background-color: #323232;
+            padding: 0.8rem;
+        }
+        
+        .ytpa-playlist-emulator > .items {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .ytpa-playlist-emulator > .items > .item {
+            background-color: #2c2c2c;
+            padding: 0.8rem;
+            border: 1px solid #1b1b1b;
+            font-size: 1.6rem;
+            color: white;
+            min-height: 5rem;
+            cursor: pointer;
+        }
+        
+        .ytpa-playlist-emulator > .items > .item:hover {
+            background-color: #505050;
+        }
+        
+        .ytpa-playlist-emulator > .items > .item:not(:last-of-type) {
+            border-bottom: 0;
+        }
+        
+        .ytpa-playlist-emulator > .items > .item[data-current] {
+            background-color: #767676;
+        }
+        
+        body:has(.ytpa-playlist-emulator) .ytp-prev-button.ytp-button,
+        body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
+            display: none !important;
+        }
     </style>`);
+
+    const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
+
+    /**
+     * @return {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, seekTo: (number) => void, isLifaAdPlaying: () => boolean }} player
+     */
+    const getPlayer = () => document.querySelector('#movie_player');
+
+    const isAdPlaying = () => !!document.querySelector('.ad-interrupting');
+
+    const redirect = (v, list, ytpaRandom = null) => {
+        if (location.host === 'm.youtube.com') {
+            // TODO: Client side routing on mobile
+        } else {
+            const redirector = document.createElement('a');
+            redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
+            redirector.setAttribute('hidden', '');
+            redirector.data = {
+                'commandMetadata': {
+                    'webCommandMetadata': {
+                        'url': `/watch?v=${v}&list=${list}${ytpaRandom !== null ? `&ytpa-random=${ytpaRandom}` : ''}`,
+                        'webPageType': 'WEB_PAGE_TYPE_WATCH',
+                        'rootVe': 3832, // ??? required though
+                    }
+                },
+                'watchEndpoint': {
+                    'videoId': v,
+                    'playlistId': list,
+                }
+            };
+            document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
+            redirector.click();
+        }
+    };
 
     let id;
     const apply = () => {
@@ -295,6 +390,173 @@
         window.addEventListener('yt-navigate-finish', addButton);
     }
 
+    // Fallback playlist emulation
+    (() => {
+        const getItems = playlist => {
+            return new Promise(resolve => {
+                GM.xmlHttpRequest({
+                    method: 'POST',
+                    url: 'https://ytplaylist.robert.wesner.io/api/list',
+                    data: JSON.stringify({uri: `https://www.youtube.com/playlist?list=${playlist}`}),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    onload: function (response) {
+                        resolve(JSON.parse(response.responseText));
+                    }
+                });
+            });
+        };
+
+        const processItems = items => {
+            const itemsContainer = document.querySelector('.ytpa-playlist-emulator .items');
+            const params = new URLSearchParams(window.location.search);
+            const list = params.get('list');
+
+            items.forEach(
+                /**
+                 * @param {{
+                 *  position: number,
+                 *  title: string,
+                 *  videoId: string,
+                 * }} item
+                 */
+                item => {
+                    const element = document.createElement('div');
+                    element.className = 'item';
+                    element.textContent = item.title;
+                    element.setAttribute('data-id', item.videoId);
+                    element.addEventListener('click', () => redirect(item.videoId, list));
+
+                    itemsContainer.append(element);
+                },
+            );
+
+            markCurrentItem(params.get('v'));
+        };
+
+        const playNextEmulationItem = () => {
+            document.querySelector(`.ytpa-playlist-emulator .items .item[data-current] + .item`)?.click();
+        };
+
+        const markCurrentItem = videoId => {
+            const existing = document.querySelector(`.ytpa-playlist-emulator .items .item[data-current]`);
+            if (existing) {
+                existing.removeAttribute('data-current');
+            }
+
+            const current = document.querySelector(`.ytpa-playlist-emulator .items .item[data-id="${videoId}"]`)
+            if (current) {
+                current.setAttribute('data-current', '');
+                current.parentElement.scrollTop = current.offsetTop - 12 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+            }
+        };
+
+        const emulatePlaylist = () => {
+            if (!window.location.pathname.endsWith('/watch')) {
+                return;
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const list = params.get('list');
+            if (params.has('ytpa-random')) {
+                return;
+            }
+
+            const existingEmulator = document.querySelector('.ytpa-playlist-emulator');
+            if (existingEmulator) {
+                if (list === existingEmulator.getAttribute('data-list')) {
+                    markCurrentItem(params.get('v'));
+
+                    return;
+                } else {
+                    // necessary to lose all the client side manipulations like SHIFT + N and the play next button
+                    window.location.reload(true);
+                }
+            }
+
+            if (!(new URLSearchParams(window.location.search).has('list'))) {
+                return;
+            }
+
+            if (!document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist #items:empty')) {
+                return;
+            }
+
+            const playlistEmulator = document.createElement('div');
+            playlistEmulator.className = 'ytpa-playlist-emulator';
+            playlistEmulator.innerHTML = `
+                <div class="title">
+                    Playlist emulator
+                </div>
+                <div class="information">
+                    It looks like YouTube is unable to handle this large playlist.
+                    Playlist emulation is a <b>limited</b> fallback feature of YTPA to enable you to watch even more content. <br>
+                    Make sure to allow the API calls, otherwise you are stuck without a playlist.
+                </div>
+                <div class="items"></div>
+                <div class="footer"></div>
+            `;
+            playlistEmulator.setAttribute('data-list', list);
+            document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist').insertAdjacentElement('afterend', playlistEmulator);
+
+            getItems(list).then(response => {
+                if (response.status === 'running') {
+                    setTimeout(() => getItems(list).then(response => processItems(response.items)), 5000);
+
+                    return;
+                }
+
+                processItems(response.items);
+            });
+
+            const nextButtonInterval = setInterval(() => {
+                const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button:not([ytpa-emulation="applied"])');
+                if (nextButton) {
+                    clearInterval(nextButtonInterval);
+
+                    // Replace with span to prevent anchor click events
+                    const newButton = document.createElement('span');
+                    newButton.className = nextButton.className;
+                    newButton.innerHTML = nextButton.innerHTML;
+                    nextButton.replaceWith(newButton);
+
+                    newButton.setAttribute('ytpa-emulation', 'applied');
+                    newButton.addEventListener('click', () => playNextEmulationItem());
+                }
+            }, 1000);
+
+            document.addEventListener('keydown', event => {
+                // SHIFT + N
+                if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                    playNextEmulationItem();
+                }
+            });
+
+            setInterval(() => {
+                const player = getPlayer();
+                const progressState = player.getProgressState();
+
+                // Do not listen for watch progress when watching advertisements
+                if (!isAdPlaying()) {
+                    // Autoplay random video
+                    if (progressState.current >= progressState.duration - 2) {
+                        // make sure vanilla autoplay doesnt take over
+                        player.pauseVideo();
+                        player.seekTo(0);
+                        playNextEmulationItem();
+                    }
+                }
+            }, 500);
+        };
+
+        if (location.host === 'm.youtube.com') {
+            // TODO: mobile playlist emulation
+        } else {
+            window.addEventListener('yt-navigate-finish', emulatePlaylist);
+        }
+    })();
+
     // Random play feature
     (() => {
         // Random play is not supported for mobile devices
@@ -313,8 +575,6 @@
          */
         const ytpaRandom = urlParams.get('ytpa-random');
 
-        const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
-
         const getStorageKey = () => `ytpa-random-${urlParams.get('list')}`;
         const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
 
@@ -325,13 +585,6 @@
                 element => element.parentElement.setAttribute('hidden', ''),
             );
         };
-
-        /**
-         * @return {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, isLifaAdPlaying: () => boolean }} player
-         */
-        const getPlayer = () => document.querySelector('#movie_player');
-
-        const isAdPlaying = () => !!document.querySelector('.ad-interrupting');
 
         // Storage needs to now be { [videoId]: bool }
         try {
@@ -375,6 +628,7 @@
                 params.delete('ytpa-random-initial');
                 window.location.href = `${window.location.pathname}?${params.toString()}`;
             } else {
+                // TODO: refactor to the new redirect() function
                 const redirector = document.createElement('a');
                 redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
                 redirector.setAttribute('hidden', '');
@@ -495,6 +749,7 @@
                     if (progressState.current >= progressState.duration - 2) {
                         // make sure vanilla autoplay doesnt take over
                         player.pauseVideo();
+                        player.seekTo(0);
                         playNextRandom();
                     }
                 }
