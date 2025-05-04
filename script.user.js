@@ -529,9 +529,12 @@
             document.addEventListener('keydown', event => {
                 // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+
                     playNextEmulationItem();
                 }
-            });
+            }, true);
 
             setInterval(() => {
                 const player = getPlayer();
@@ -717,12 +720,15 @@
             document.addEventListener('keydown', event => {
                 // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
+
                     const videoId = getVideoId(location.href);
                     markWatched(videoId);
                     // Unfortunately there is no workaround to YouTube redirecting to the next in line without a reload
                     playNextRandom(true);
                 }
-            });
+            }, true);
 
             if (isIntervalSet) {
                 return;
