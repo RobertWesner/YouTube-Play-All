@@ -224,6 +224,11 @@
         body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
             display: none !important;
         }
+        
+        /* hide when sorting by oldest */
+        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn, ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn {
+            display: none;
+        }
     </style>`);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');

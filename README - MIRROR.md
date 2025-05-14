@@ -11,6 +11,12 @@
 
 ---
 
+<div align="center">
+Get more YouTube scripts on <a href="https://scripts.yt"><img src="https://scripts.yt/favicon.ico" height="10"> scripts.yt</a>
+</div>
+
+---
+
 I got frustrated from not being able to binge-watch some YouTube channels. Unable to find a working userscript, I created this. Hopefully, it will be as useful to you as it is to me.
 
 Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube.
@@ -27,8 +33,8 @@ or using the `Install` button.
 
 Available mirrors:
 - [GitHub](https://github.com/RobertWesner/YouTube-Play-All)
-- [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
-- [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
+  - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
+  - [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
 
 
 ## Usage
