@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250504-0-dev
+// @version         20250514-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -57,6 +57,7 @@
         
         .ytpa-btn-sections > .ytpa-btn-section {
             padding: 0.5em;
+            display: inline-block;
         }
 
         .ytpa-btn-sections > .ytpa-btn-section:first-child {
@@ -312,8 +313,8 @@
                 <span class="ytpa-btn ytpa-random-btn ytpa-btn-sections">
                     <a class="ytpa-btn-section" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1">
                         Play Random
-                    </a>
-                    <span class="ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover">
+                    </a><!--
+                    --><span class="ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover">
                         &#x25BE
                     </span>
                 </span>
