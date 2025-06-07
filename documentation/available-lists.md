@@ -37,18 +37,18 @@ Unrealistic to brute force but possibly relevant:
 ## Uploads
 
 ### UU | Uploads from \<user name>
-Contains both videos and shorts
+Contains videos, shorts, and live streams
 
 ### PU¹ | Popular uploads
-Contains both videos and shorts, sorted by most popular descending
+Contains videos, shorts, and live streams, sorted by most popular descending
 
 ## Videos
 
 ### UULF | Videos
-Only videos, no shorts
+Only videos, no shorts, no live streams
 
 ### UULP | Popular videos
-Only videos, no shorts, sorted by most popular descending
+Only videos, no shorts, no live streams, sorted by most popular descending
 
 ## Shorts
 
@@ -74,8 +74,11 @@ Members-only videos
 ### UUMV | Members-only live streams
 Members-only live streams
 
+## UUMS 
+Members-only shorts
+
 ### UUMO | Members-only videos
-Contrary to the name, it contains both members-only videos and live streams
+Contrary to the name, it contains members-only videos, shorts, and live streams
 
 ## FL | Favorites
 Favorites of a channel.
@@ -94,9 +97,6 @@ Is it just the private version of FL?
 
 # Unidentified links
 Valid links (HTTP 200) that could not be verified _yet_ with existing channels.
-
-## UUMS
-Presumably members-only shorts, given the MS name, but could not verify with any existing channels.
 
 ## RDCL
 > The playlist does not exist.
