@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250514-0
+// @version         20250609-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -196,6 +196,24 @@
             max-height: 500px;
             overflow-y: auto;
             overflow-x: hidden;
+        }
+        
+        .ytpa-playlist-emulator:not([data-failed]) > .items:empty::before {
+            content: 'Loading playlist...';
+            background-color: #626262;
+            padding: 0.8rem;
+            color: white;
+            font-size: 2rem;
+            display: block;
+        }
+        
+        .ytpa-playlist-emulator[data-failed="rejected"] > .items:empty::before {
+            content: "Make sure to allow the external API call to ytplaylist.robert.wesner.io to keep viewing playlists that YouTube doesn't natively support!";
+            background-color: #491818;
+            padding: 0.8rem;
+            color: #ff7c7c;
+            font-size: 1rem;
+            display: block;
         }
         
         .ytpa-playlist-emulator > .items > .item {
@@ -407,9 +425,12 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    onload: function (response) {
+                    onload: response => {
                         resolve(JSON.parse(response.responseText));
-                    }
+                    },
+                    onerror: () => {
+                        document.querySelector('.ytpa-playlist-emulator').setAttribute('data-failed', 'rejected');
+                    },
                 });
             });
         };
@@ -469,6 +490,13 @@
                 return;
             }
 
+            // prevent playlist emulation on queue
+            // its impossible to fetch that playlist externally anyway
+            // https://github.com/RobertWesner/YouTube-Play-All/issues/33
+            if (list.startsWith('TLPQ')) {
+                return;
+            }
+
             const existingEmulator = document.querySelector('.ytpa-playlist-emulator');
             if (existingEmulator) {
                 if (list === existingEmulator.getAttribute('data-list')) {
@@ -498,7 +526,6 @@
                 <div class="information">
                     It looks like YouTube is unable to handle this large playlist.
                     Playlist emulation is a <b>limited</b> fallback feature of YTPA to enable you to watch even more content. <br>
-                    Make sure to allow the API calls, otherwise you are stuck without a playlist.
                 </div>
                 <div class="items"></div>
                 <div class="footer"></div>
@@ -562,7 +589,7 @@
         if (location.host === 'm.youtube.com') {
             // TODO: mobile playlist emulation
         } else {
-            window.addEventListener('yt-navigate-finish', emulatePlaylist);
+            window.addEventListener('yt-navigate-finish', () => setTimeout(emulatePlaylist, 1000));
         }
     })();
 
