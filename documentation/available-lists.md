@@ -1,6 +1,10 @@
 # Valid `list` GET-Parameters
 This is a collection of brute-forced playlists (HTTP status 200) for a given channel ID.
 
+> Thank you to [Bakr-Ali](https://github.com/Bakr-Ali) for pointing me towards [this resource](https://wiki.archiveteam.org/index.php/YouTube/Technical_details#Playlists).
+> 
+> Initially all the information in this file were just brute forced prefixes. Make sure to take a look at the above link for any additional playlists and information.
+
 ```
 https://www.youtube.com/playlist?list=...
 https://www.youtube.com/watch?v=...&list=...
