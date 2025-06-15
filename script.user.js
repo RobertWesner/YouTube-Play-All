@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250609-0
+// @version         20250615-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -421,14 +421,17 @@
                 GM.xmlHttpRequest({
                     method: 'POST',
                     url: 'https://ytplaylist.robert.wesner.io/api/list',
-                    data: JSON.stringify({uri: `https://www.youtube.com/playlist?list=${playlist}`}),
+                    data: JSON.stringify({
+                        uri: `https://www.youtube.com/playlist?list=${playlist}`,
+                        requestType: `YTPA ${GM_info.script.version}`,
+                    }),
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     onload: response => {
                         resolve(JSON.parse(response.responseText));
                     },
-                    onerror: () => {
+                    onerror: error => {
                         document.querySelector('.ytpa-playlist-emulator').setAttribute('data-failed', 'rejected');
                     },
                 });
@@ -494,6 +497,11 @@
             // its impossible to fetch that playlist externally anyway
             // https://github.com/RobertWesner/YouTube-Play-All/issues/33
             if (list.startsWith('TLPQ')) {
+                return;
+            }
+
+            // No user ID in the list, cannot be fetched externally -> no emulation
+            if (list.length <= 4) {
                 return;
             }
 
