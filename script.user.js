@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250615-0
+// @version         20250620-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -381,7 +381,7 @@
             return;
         }
 
-        const html = await (await fetch('.')).text();
+        const html = await (await fetch(location.href)).text();
         const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60 + 2 /* ID starts with "UC" */;
         id = html.substring(i, i + 22);
 
