@@ -329,7 +329,7 @@
         } else {
             parent.insertAdjacentHTML(
                 'beforeend',
-                `<a class="ytpa-btn ytpa-play-all-btn ytpa-unsupported" href="https://github.com/RobertWesner/YouTube-Play-All/issues/39" target="_blank">Not Playlist Found</a>`
+                `<a class="ytpa-btn ytpa-play-all-btn ytpa-unsupported" href="https://github.com/RobertWesner/YouTube-Play-All/issues/39" target="_blank">No Playlist Found</a>`
             );
         }
 
