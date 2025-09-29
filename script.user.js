@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250620-0
+// @version         20250929-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -93,6 +93,11 @@
 
         .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
             background-color: #6192ee;
+        }
+        
+        .ytpa-play-all-btn.ytpa-unsupported {
+            background-color: #828282;
+            color: white;
         }
         
         .ytpa-random-popover {
@@ -244,7 +249,7 @@
         }
         
         /* hide when sorting by oldest */
-        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn, ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn {
+        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
             display: none;
         }
     </style>`);
@@ -287,7 +292,7 @@
     const apply = () => {
         let parent = location.host === 'm.youtube.com'
             // mobile view
-            ? document.querySelector('ytm-feed-filter-chip-bar-renderer > div')
+            ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
             : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
 
@@ -316,10 +321,15 @@
                 'beforeend',
                 `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
             );
-        } else {
+        } else if (parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected')) {
             parent.insertAdjacentHTML(
                 'beforeend',
                 `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${allPlaylist}${id}&playnext=1">Play All</a>`
+            );
+        } else {
+            parent.insertAdjacentHTML(
+                'beforeend',
+                `<a class="ytpa-btn ytpa-play-all-btn ytpa-unsupported" href="https://github.com/RobertWesner/YouTube-Play-All/issues/39" target="_blank">Not Playlist Found</a>`
             );
         }
 
@@ -368,13 +378,30 @@
         }
     };
 
-    const observer = new MutationObserver(apply);
+    const observer = new MutationObserver(() => {
+        // [20250929-0] removeButton first and then apply, not addButton, since we don't need the pathname validation, and we want mobile to also use it
+        removeButton();
+        apply();
+    });
+
     const addButton = async () => {
         observer.disconnect();
 
         if (!(window.location.pathname.endsWith('/videos') || window.location.pathname.endsWith('/shorts') || window.location.pathname.endsWith('/streams'))) {
             return;
         }
+
+        // Regenerate button if switched between Latest and Popular
+        const element = document.querySelector('ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
+        if (!element) {
+            return;
+        }
+
+        observer.observe(element, {
+            attributes: true,
+            childList: false,
+            subtree: false
+        });
 
         // This check is necessary for the mobile Interval
         if (document.querySelector('.ytpa-play-all-btn')) {
@@ -387,18 +414,6 @@
 
         // Initially generate button
         apply();
-
-        // Regenerate button if switched between Latest and Popular
-        const element = document.querySelector('ytd-rich-grid-renderer');
-        if (!element) {
-            return;
-        }
-
-        observer.observe(element, {
-            attributes: true,
-            childList: false,
-            subtree: false
-        });
     };
 
     // Removing the button prevents it from still existing when switching between "Videos", "Shorts", and "Live"
