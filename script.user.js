@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20250929-0
+// @version         20251002-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -288,8 +288,13 @@
         }
     };
 
-    let id;
+    let id = '';
     const apply = () => {
+        if (id === '') {
+            // do not apply prematurely, caused by mutation observer
+            return;
+        }
+
         let parent = location.host === 'm.youtube.com'
             // mobile view
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
@@ -393,15 +398,13 @@
 
         // Regenerate button if switched between Latest and Popular
         const element = document.querySelector('ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
-        if (!element) {
-            return;
+        if (element) {
+            observer.observe(element, {
+                attributes: true,
+                childList: false,
+                subtree: false
+            });
         }
-
-        observer.observe(element, {
-            attributes: true,
-            childList: false,
-            subtree: false
-        });
 
         // This check is necessary for the mobile Interval
         if (document.querySelector('.ytpa-play-all-btn')) {
