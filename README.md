@@ -94,7 +94,7 @@ If your current installation does not work, please update it by following the in
 
 ## Contributing and Testing
 
-Please use [the testing userscript](./test.user.js) after making a change.
+Please use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
 
 1. Install the testing script.
 2. Open your developer tools.
