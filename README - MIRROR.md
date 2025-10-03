@@ -5,7 +5,7 @@
     <a href="#issues">Issues</a> |
     <a href="#license">License</a>
     <p>
-        A tiny userscript adding the Play-All button back to YouTube.
+        A sophisticated userscript adding the Play-All button back to YouTube.
     </p>
 </div>
 

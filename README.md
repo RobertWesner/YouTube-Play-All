@@ -5,7 +5,7 @@
     <a href="#issues">Issues</a> |
     <a href="#license">License</a>
     <p>
-        <strong>YTPA</strong>: A tiny userscript adding the Play-All button back to YouTube.
+        <strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
     </p>
 </div>
 
@@ -34,6 +34,8 @@ Now with support for **Random Play**!
 2. On **Chrome**, **Edge**, **Opera**, and **OperaGX** make sure to [enable developer mode](https://www.tampermonkey.net/faq.php#Q209).
 
 3. Install this userscript by clicking [this link](../../raw/main/script.user.js).
+
+4. On **Chrome** and **Edge** make sure to [allow user scripts](https://www.tampermonkey.net/faq.php#Q209) if the script does not load.
 
 Available mirrors:
    - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
@@ -90,6 +92,14 @@ Optionally with custom shuffle priority (select by clicking `▾`).
 
 If your current installation does not work, please update it by following the installation steps above before opening issues.
 
+## Contributing and Testing
+
+Please use [the testing userscript](./test.user.js) after making a change.
+
+1. Install the testing script.
+2. Open your developer tools.
+3. Run `YTPATestSuite.test();`.
+4. Follow the instructions on screen.
 
 ## License
 
