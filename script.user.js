@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251002-0
+// @version         20251111-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -136,6 +136,7 @@
             border-radius: 8px;
             font-size: 1.6rem;
             transform: translate(-100%, 0.4em);
+            z-index: 10000;
         }
         
         .ytpa-random-popover > * {
@@ -365,7 +366,7 @@
         } else {
             parent.insertAdjacentHTML(
                 'beforeend',
-                `<a class="ytpa-btn ytpa-play-all-btn ytpa-unsupported" href="https://github.com/RobertWesner/YouTube-Play-All/issues/39" target="_blank">No Playlist Found</a>`
+                `<a class="ytpa-btn ytpa-play-all-btn ytpa-unsupported" href="https://github.com/RobertWesner/YouTube-Play-All/issues/39" target="_blank" rel="noreferrer">No Playlist Found</a>`
             );
         }
 
@@ -380,21 +381,41 @@
             // Only allow random play in desktop version for now
             parent.insertAdjacentHTML('beforeend', `
                 <span class="ytpa-btn ytpa-random-btn ytpa-btn-sections">
-                    <a class="ytpa-btn-section" href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1">
+                    <a
+                        class="ytpa-btn-section"
+                        href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1"
+                        role="button"
+                    >
                         Play Random
                     </a><!--
-                    --><span class="ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover">
+                    --><span
+                        class="ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover"
+                        role="button"
+                        tabindex="0"
+                        aria-label="More options for random play"
+                        aria-haspopup="menu"
+                        aria-expanded="false"
+                    >
                         &#x25BE
                     </span>
                 </span>
+                <span class="ytpa-random-btn-tab-fix" tabindex="-1" aria-hidden="true"></span>
             `);
 
-            document.body.insertAdjacentHTML('beforeend', `
-                <div class="ytpa-random-popover" hidden="">
-                    <a href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest">
+            document.body.insertAdjacentHTML('afterbegin', `
+                <div class="ytpa-random-popover" role="menu" aria-label="Random play options" hidden="">
+                    <a
+                        href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest"
+                        aria-label="More options for Play Random"
+                        role="menuitem"
+                    >
                         Prefer newest
                     </a>
-                    <a href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1">
+                    <a
+                        href="/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1"
+                        aria-label="More options for Play Random"
+                        role="menuitem"
+                    >
                         Prefer oldest
                     </a>
                 </div>
@@ -402,15 +423,30 @@
 
             const randomMoreOptionsBtn = document.querySelector('.ytpa-random-more-options-btn');
             const randomPopover = document.querySelector('.ytpa-random-popover');
-            randomMoreOptionsBtn.addEventListener('click', () => {
+
+            const showPopover = () => {
                 const rect = randomMoreOptionsBtn.getBoundingClientRect();
                 randomPopover.style.top = rect.bottom.toString() + 'px';
                 randomPopover.style.left = rect.right.toString() + 'px';
                 randomPopover.removeAttribute('hidden');
-            });
-            randomPopover.addEventListener('mouseleave', () => {
+                randomPopover.querySelector('a').focus();
+                randomMoreOptionsBtn.setAttribute('aria-expanded', 'true');
+            };
+            const hidePopover = () => {
                 randomPopover.setAttribute('hidden', '');
+                randomMoreOptionsBtn.setAttribute('aria-expanded', 'false');
+                document.querySelector('.ytpa-random-btn-tab-fix').focus();
+            };
+
+            randomMoreOptionsBtn.addEventListener('click', showPopover);
+            randomMoreOptionsBtn.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    showPopover();
+                }
             });
+            randomPopover.addEventListener('mouseleave', hidePopover);
+            randomPopover.querySelector('a:last-of-type').addEventListener('focusout', hidePopover);
         }
     };
 
@@ -676,7 +712,7 @@
         const isWatched = videoId => getStorage()[videoId] || false;
         const markWatched = videoId => {
             localStorage.setItem(getStorageKey(), JSON.stringify({...getStorage(), [videoId]: true }));
-            document.querySelectorAll('#wc-endpoint[href*=zsA3X40nz9w]').forEach(
+            document.querySelectorAll(`#wc-endpoint[href*=${videoId}]`).forEach(
                 element => element.parentElement.setAttribute('hidden', ''),
             );
         };
@@ -697,7 +733,7 @@
             const params = new URLSearchParams(window.location.search);
 
             // Either one fifth or at most the 20 newest.
-            const preferenceRange = Math.min(Math.min(videos.length * 0.2, 20))
+            const preferenceRange = Math.max(1, Math.min(Math.min(videos.length * 0.2, 20)))
 
             let videoIndex;
             switch (ytpaRandom) {
@@ -858,6 +894,8 @@
                     const newButton = document.createElement('span');
                     newButton.className = nextButton.className;
                     newButton.innerHTML = nextButton.innerHTML;
+                    newButton.role = 'button';
+                    newButton.tabIndex = 0;
                     nextButton.replaceWith(newButton);
 
                     newButton.setAttribute('ytpa-random', 'applied');

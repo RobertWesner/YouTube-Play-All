@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All Test Suite
 // @description     Tests YTPA to prevent bugs
-// @version         20251003-0
+// @version         20251111-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -66,14 +66,16 @@
      */
     const waitFor = condition => {
         return new Promise(resolve => {
-            const interval = setInterval(() => {
-                if (!condition()) {
-                    return;
-                }
+            setTimeout(() => {
+                const interval = setInterval(() => {
+                    if (!condition()) {
+                        return;
+                    }
 
-                setTimeout(() => resolve(), 1000);
-                clearInterval(interval);
-            }, 200);
+                    setTimeout(() => resolve(), 1000);
+                    clearInterval(interval);
+                }, 200);
+            }, 1000);
         })
     };
 
