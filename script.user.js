@@ -8,10 +8,40 @@
 // @match           https://*.youtube.com/*
 // @icon            https://scripts.yt/favicon.ico
 // @grant           GM.xmlHttpRequest
+// @connect         ytplaylist.robert.wesner.io
+// @downloadURL     https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/script.user.js
+// @updateURL       https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/script.user.js
+// @homepageURL     https://scripts.yt/scripts/ytpa-youtube-play-all-YTPA-Play-All-YouTube-Videos-Of-A-Channel
+// @supportURL      https://github.com/RobertWesner/YouTube-Play-All/issues
 // ==/UserScript==
+
+// ### SAFETY ###
+//
+// Using this script will in almost all cases NOT lead to your accounts being suspended
+// as it only refers to internal existing YouTube playlists
+// and does minor UI/UX changes entirely on the client side.
+//
+// Keep in mind, this software is provided as is
+// and without any guarantees or liability by the author and contributors.
+// Refer to the license for more details.
+//
+// ### PRIVACY ###
+//
+// 99% of this script is running on your device without any calls to outside of YouTube.
+//
+// GM.xmlHttpRequest() is only used to retrieve the fallback playlist emulation data in absolute edge cases
+// when the playlist exceeds thousands, rather tens of thousands, of items.
+//
+// The API is open source and hosted by me personally.
+//
+// GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
+// Source of the API: https://github.com/RobertWesner/youtube-playlist
 
 /**
  * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
+ */
+/**
+ * @var {{ xmlHttpRequest: (object) => void }} GM
  */
 /**
  * @var {{ script: { version: string } }} GM_info
@@ -30,6 +60,7 @@
         );
     }
 
+    // TODO: look into rewriting this "hack" to improve quality of this script
     if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
@@ -436,6 +467,8 @@
     (() => {
         const getItems = playlist => {
             return new Promise(resolve => {
+                // Request is only used to fetch the full playlist contents from the YouTube Data API.
+                // See comment at the start of the script.
                 GM.xmlHttpRequest({
                     method: 'POST',
                     url: 'https://ytplaylist.robert.wesner.io/api/list',
