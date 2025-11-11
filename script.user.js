@@ -108,22 +108,24 @@
             vertical-align: top;
         }
 
+        /* Colors were updated to meet WCAG AAA (and AA on hover)*/
+
         .ytpa-play-all-btn {
-            background-color: #bf4bcc;
+            background-color: #890097;
             color: white;
         }
 
         .ytpa-play-all-btn:hover {
-            background-color: #d264de;
+            background-color: #b247cc;
         }
         
         .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover > * {
-            background-color: #2b66da;
+            background-color: #2053B8;
             color: white;
         }
 
         .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
-            background-color: #6192ee;
+            background-color: #2b66da;
         }
         
         .ytpa-play-all-btn.ytpa-unsupported {
