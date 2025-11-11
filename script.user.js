@@ -729,6 +729,12 @@
         }
 
         const playNextRandom = (reload = false) => {
+            // prevent the bug that occurs when clicking on the channel from random play
+            // and then navigating to videos whilst mini-player is still open
+            if (window.location.pathname !== '/watch') {
+                return;
+            }
+
             getPlayer().pauseVideo()
 
             const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
