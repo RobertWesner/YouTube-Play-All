@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251111-0
+// @version         20251113-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -72,9 +72,14 @@
             font-size: 1.4rem;
             line-height: 2rem;
             font-weight: 500;
-            padding: 0.5em;
             margin-left: 0.6em;
             user-select: none;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
+            height: var(--ytpa-height);
         }
         
         .ytpa-btn, .ytpa-btn > * {
@@ -84,11 +89,15 @@
         
         .ytpa-btn-sections {
             padding: 0;
+            flex-direction: row;
         }
         
         .ytpa-btn-sections > .ytpa-btn-section {
-            padding: 0.5em;
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
         }
 
         .ytpa-btn-sections > .ytpa-btn-section:first-child {
@@ -181,20 +190,25 @@
         /* Fix for mobile view */
         ytm-feed-filter-chip-bar-renderer .ytpa-btn {
             margin-right: 12px;
-            padding: 0.4em;
+            padding: 0 0.4em;
+            display: inline-flex !important;
         }
         
         body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
             display: none !important;
         }
         
-        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
             height: 1em;
             visibility: hidden;
         }
         
-        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
             filter: blur(2em);
         }
 
@@ -286,7 +300,16 @@
         ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
             display: none;
         }
-    </style>`);
+        
+        .ytpa-random-btn-tab-fix {
+            visibility: hidden;
+        }
+        
+        .ytpa-button-container ~ .ytpa-button-container {
+            display: none;
+        }
+    </style>
+    <style id="ytpa-height"></style>`);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -324,6 +347,10 @@
 
     let id = '';
     const apply = () => {
+        document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
+            document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer')?.offsetHeight ?? 32
+        }px; }`
+
         if (id === '') {
             // do not apply prematurely, caused by mutation observer
             return;
@@ -355,7 +382,7 @@
                 : ['UULV', 'UUPV'];
 
         // Check if popular videos are displayed
-        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentHTML(
                 'beforeend',
                 `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
@@ -400,8 +427,8 @@
                     >
                         &#x25BE
                     </span>
+                    <span class="ytpa-random-btn-tab-fix" tabindex="-1" aria-hidden="true"></span>
                 </span>
-                <span class="ytpa-random-btn-tab-fix" tabindex="-1" aria-hidden="true"></span>
             `);
 
             document.body.insertAdjacentHTML('afterbegin', `
@@ -796,7 +823,7 @@
                 return;
             }
 
-            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer');
+            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer ');
             if (playlistContainer === null) {
                 return;
             }
@@ -888,8 +915,8 @@
                     }
 
                     // Autoplay random video
-                    if (progressState.current >= progressState.duration - 2) {
-                        // make sure vanilla autoplay doesnt take over
+                    if (progressState.current >= progressState.duration - 3) {
+                        // make sure vanilla autoplay doesn't take over
                         player.pauseVideo();
                         player.seekTo(0);
                         playNextRandom();
@@ -912,7 +939,7 @@
                         playNextRandom();
                     });
                 }
-            }, 1000);
+            }, 500);
         };
 
         setInterval(applyRandomPlay, 1000);
