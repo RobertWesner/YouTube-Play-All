@@ -7,6 +7,9 @@
     <p>
         <strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
     </p>
+    <a href="https://forms.gle/UV9icRvkkaxs1Jnn6" aria-label="provide feedback" role="button">
+        <img src="./readme/button_feedback.png" tabindex="-1" height="32">
+    </a>
 </div>
 
 ---
@@ -26,10 +29,10 @@ Now with support for **Random Play**!
 ## Installation
 
 1. Install a userscript manager. For example, [Tampermonkey](https://www.tampermonkey.net/):
-   - [Firefox](https://addons.mozilla.org/en/firefox/addon/tampermonkey/)<br>
-   - [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)<br>
-   - [Edge](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)<br>
-   - [Opera](https://addons.opera.com/en/extensions/details/tampermonkey-beta/)<br>
+    - [Firefox](https://addons.mozilla.org/en/firefox/addon/tampermonkey/)<br>
+    - [Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)<br>
+    - [Edge](https://microsoftedge.microsoft.com/addons/detail/tampermonkey/iikmkjmpaadaobahmlepeloendndfphd)<br>
+    - [Opera](https://addons.opera.com/en/extensions/details/tampermonkey-beta/)<br>
 
 2. On **Chrome**, **Edge**, **Opera**, and **OperaGX** make sure to [enable developer mode](https://www.tampermonkey.net/faq.php#Q209).
 
@@ -38,9 +41,13 @@ Now with support for **Random Play**!
 4. On **Chrome** and **Edge** make sure to [allow user scripts](https://www.tampermonkey.net/faq.php#Q209) if the script does not load.
 
 Available mirrors:
-   - [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
-   - [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
+- [Greasy Fork](https://greasyfork.org/en/scripts/490557-youtube-play-all)
+- [OpenUserJS](https://openuserjs.org/scripts/RobertWesner/YouTube_Play_All)
 
+
+## Demo For Latest/Popular Videos/Shorts
+
+<img src="./readme/demo.gif" alt="Short animated demo" height="240">
 
 ## Usage
 
