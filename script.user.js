@@ -300,6 +300,10 @@
         .ytpa-random-btn-tab-fix {
             visibility: hidden;
         }
+        
+        .ytpa-button-container ~ .ytpa-button-container {
+            display: none;
+        }
     </style>
     <style id="ytpa-height"></style>`);
 
@@ -340,7 +344,7 @@
     let id = '';
     const apply = () => {
         document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
-            document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer').offsetHeight
+            document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer')?.offsetHeight ?? 32
         }px; }`
 
         if (id === '') {
@@ -374,7 +378,7 @@
                 : ['UULV', 'UUPV'];
 
         // Check if popular videos are displayed
-        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentHTML(
                 'beforeend',
                 `<a class="ytpa-btn ytpa-play-all-btn" href="/playlist?list=${popularPlaylist}${id}&playnext=1">Play Popular</a>`
