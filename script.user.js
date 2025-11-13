@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251111-0
+// @version         20251113-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -72,9 +72,14 @@
             font-size: 1.4rem;
             line-height: 2rem;
             font-weight: 500;
-            padding: 0.5em;
             margin-left: 0.6em;
             user-select: none;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
+            height: var(--ytpa-height);
         }
         
         .ytpa-btn, .ytpa-btn > * {
@@ -84,11 +89,15 @@
         
         .ytpa-btn-sections {
             padding: 0;
+            flex-direction: row;
         }
         
         .ytpa-btn-sections > .ytpa-btn-section {
-            padding: 0.5em;
-            display: inline-block;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
         }
 
         .ytpa-btn-sections > .ytpa-btn-section:first-child {
@@ -181,7 +190,8 @@
         /* Fix for mobile view */
         ytm-feed-filter-chip-bar-renderer .ytpa-btn {
             margin-right: 12px;
-            padding: 0.4em;
+            padding: 0 0.4em;
+            display: inline-flex !important;
         }
         
         body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
@@ -286,7 +296,12 @@
         ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
             display: none;
         }
-    </style>`);
+        
+        .ytpa-random-btn-tab-fix {
+            visibility: hidden;
+        }
+    </style>
+    <style id="ytpa-height"></style>`);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -324,6 +339,10 @@
 
     let id = '';
     const apply = () => {
+        document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
+            document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer').offsetHeight
+        }px; }`
+
         if (id === '') {
             // do not apply prematurely, caused by mutation observer
             return;
@@ -400,8 +419,8 @@
                     >
                         &#x25BE
                     </span>
+                    <span class="ytpa-random-btn-tab-fix" tabindex="-1" aria-hidden="true"></span>
                 </span>
-                <span class="ytpa-random-btn-tab-fix" tabindex="-1" aria-hidden="true"></span>
             `);
 
             document.body.insertAdjacentHTML('afterbegin', `
