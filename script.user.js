@@ -195,16 +195,20 @@
         }
         
         body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
             display: none !important;
         }
         
-        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
             height: 1em;
             visibility: hidden;
         }
         
-        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
             filter: blur(2em);
         }
 
@@ -819,7 +823,7 @@
                 return;
             }
 
-            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer');
+            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer ');
             if (playlistContainer === null) {
                 return;
             }
@@ -911,8 +915,8 @@
                     }
 
                     // Autoplay random video
-                    if (progressState.current >= progressState.duration - 2) {
-                        // make sure vanilla autoplay doesnt take over
+                    if (progressState.current >= progressState.duration - 3) {
+                        // make sure vanilla autoplay doesn't take over
                         player.pauseVideo();
                         player.seekTo(0);
                         playNextRandom();
@@ -935,7 +939,7 @@
                         playNextRandom();
                     });
                 }
-            }, 1000);
+            }, 500);
         };
 
         setInterval(applyRandomPlay, 1000);
