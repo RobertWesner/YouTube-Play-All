@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251113-0
+// @version         20251114-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -60,7 +60,7 @@
         );
     }
 
-    // TODO: look into rewriting this "hack" to improve quality of this script
+    // TODO: look into rewriting this "trick" to improve quality of this script
     if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
@@ -79,6 +79,7 @@
             justify-content: center;
             vertical-align: top;
             padding: 0 0.5em;
+            /*noinspection CssUnresolvedCustomProperty*/
             height: var(--ytpa-height);
         }
         
@@ -346,6 +347,59 @@
     };
 
     let id = '';
+
+    // This looks funny, but is currently (2025) the
+    // most reliable way to fetch the channelId from within the browser context
+    const refreshId = async () => {
+        let channelId = '';
+
+        const pass = () => /UC[\w_-]+/.test(channelId)
+
+        const fallback = async () => {
+            try {
+                const html = await(await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
+                channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
+            } catch (_) {}
+        }
+
+        // first try getting it from the channel view
+        try {
+            const html = await(await fetch(location.href)).text();
+            const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
+            channelId = html.substring(i, i + 24);
+        } catch (_) {}
+
+        // then try it from the first video/short/stream
+        if (!pass()) {
+            await fallback();
+        }
+
+        // last resort... wait for a bit and try again
+        const wait = new Promise(resolve => {
+            setTimeout(() => {
+                (async () => {
+                    await fallback();
+                    resolve();
+                })();
+            }, 1000);
+        });
+        if (!pass()) {
+            await wait
+        }
+
+        if (!pass()) {
+            console.error(
+                '%cYTPA - YouTube Play All\n',
+                'color: #bf4bcc; font-size: 32px; font-weight: bold',
+                'Could not determine channelId...',
+            );
+
+            return;
+        }
+
+        id = channelId.substring(2);
+    }
+
     const apply = () => {
         document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
             document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer')?.offsetHeight ?? 32
@@ -507,9 +561,7 @@
             return;
         }
 
-        const html = await (await fetch(location.href)).text();
-        const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60 + 2 /* ID starts with "UC" */;
-        id = html.substring(i, i + 22);
+        await refreshId()
 
         // Initially generate button
         apply();

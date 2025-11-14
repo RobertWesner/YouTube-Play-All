@@ -1,5 +1,11 @@
 # YTPA Changelog
 
+## 20251114-0
+
+Fixed a small but old bug that lead to failed channelId extraction on a small set of channels.
+
+* [#9](https://github.com/RobertWesner/YouTube-Play-All/issues/9) Improved reliability of channelId extraction.
+
 ## 20251113-0
 
 Minor bugfixes and stylistic improvements.
