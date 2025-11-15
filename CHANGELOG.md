@@ -1,5 +1,9 @@
 # YTPA Changelog
 
+## development
+
+* Attributes that are not HtmlElement properties are set from safeBuildDynamicHtml.
+
 ## 20251115-0
 
 Improved compatibility for the browser extension wrapper

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251115-0
+// @version         20251115-0-dev
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -83,8 +83,14 @@
                     return () => element;
                 }
 
+                const alwaysUseAttributes = ['hidden', 'style'];
+
                 return value => {
-                    element[prop.replace('_', '-')] = value;
+                    if (!alwaysUseAttributes.includes(prop) && prop in element) {
+                        element[prop] = value;
+                    } else {
+                        element.setAttribute(prop.replace('_', '-'), value);
+                    }
 
                     return proxy;
                 };
@@ -470,6 +476,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
+                        .role('button')
                         .unwrap(),
                     element => element.textContent = 'Play Popular',
                 ),
@@ -481,6 +488,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
+                        .role('button')
                         .unwrap(),
                     element => element.textContent = 'Play All',
                 ),
@@ -492,6 +500,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn ytpa-unsupported')
                         .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
+                        .role('button')
                         .target('_blank')
                         .rel('noreferrer')
                         .unwrap(),
@@ -520,7 +529,7 @@
                             () => buildElement(document.createElement('a'))
                                 .className('ytpa-btn-section')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
-                                .rel('button')
+                                .role('button')
                                 .unwrap(),
                             element => element.textContent = 'Play Random',
                         ),
@@ -553,7 +562,7 @@
                     () => buildElement(document.createElement('div'))
                         .className('ytpa-random-popover')
                         .role('menu')
-                        .aria_label('Random play options"')
+                        .aria_label('Random play options')
                         .hidden('')
                         .unwrap(),
                     element => element.append(
