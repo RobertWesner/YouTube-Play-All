@@ -1,5 +1,26 @@
 # YTPA Changelog
 
+## 20251115-0
+
+Improved compatibility for the browser extension wrapper
+by replacing `insertAdjacentHTML` with `safeBuildDynamicHtml`.
+Also added some reliability improvements when switching between pages.
+
+* Implemented safeBuildDynamicHtml().
+* Fixed random-play querySelector issue.
+* Removed the redundant badge that was visible on random play.
+* Improved reliability when starting in homepage and client-side-navigating to the channel videos.
+
+Deep testing of all features with the modern UI.
+
+Verified working features:
+
+* Basic playlist link generation
+* Random play
+  * Clicking within playlist preserving random play
+  * Clicking "Next" button preserving random play
+* Playlist emulation
+
 ## 20251114-0
 
 Fixed a small but old bug that lead to failed channelId extraction on a small set of channels.
