@@ -389,35 +389,36 @@
 
         const pass = () => /UC[\w_-]+/.test(channelId)
 
-        const fallback = async () => {
+        const tryFetch = async () => {
             try {
                 const html = await(await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
                 channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
             } catch (_) {}
         }
 
-        // first try getting it from the channel view
-        try {
-            const html = await(await fetch(location.href)).text();
-            const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
-            channelId = html.substring(i, i + 24);
-        } catch (_) {}
+        // try it from the first video/short/stream
+        await tryFetch();
 
-        // then try it from the first video/short/stream
-        if (!pass()) {
-            await fallback();
-        }
-
-        // last resort... wait for a bit and try again
+        // wait for a bit and try again
         if (!pass()) {
             await new Promise(resolve => {
                 setTimeout(() => {
                     (async () => {
-                        await fallback();
+                        await tryFetch();
                         resolve();
                     })();
                 }, 1000);
             });
+        }
+
+        // unreliable in some cases but better than not trying,
+        // getting it from the channel view
+        if (!pass()) {
+            try {
+                const html = await (await fetch(location.href)).text();
+                const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
+                channelId = html.substring(i, i + 24);
+            } catch (_) {}
         }
 
         if (!pass()) {

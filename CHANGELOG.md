@@ -5,6 +5,7 @@
 * Attributes that are not HtmlElement properties are set from safeBuildDynamicHtml.
 * Ensure all links in playlist during random play lead to random play.
 * Minor UI improvements for random play.
+* Made fetching of channelId more reliable when starting at a channel page and navigating to another.
 
 ## 20251115-0
 
