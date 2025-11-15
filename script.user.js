@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251115-0
+// @version         20251115-1
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -83,8 +83,14 @@
                     return () => element;
                 }
 
+                const alwaysUseAttributes = ['hidden', 'style'];
+
                 return value => {
-                    element[prop.replace('_', '-')] = value;
+                    if (!alwaysUseAttributes.includes(prop) && prop in element) {
+                        element[prop] = value;
+                    } else {
+                        element.setAttribute(prop.replace('_', '-'), value);
+                    }
 
                     return proxy;
                 };
@@ -335,7 +341,7 @@
         /* [2025-11] Fix for the new UI */
         .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
             border-radius: 100px !important;
-            margin-left: 1em;
+            margin-left: 1em !important;
         }
     </style>
     <style id="ytpa-height"></style>`);
@@ -383,35 +389,36 @@
 
         const pass = () => /UC[\w_-]+/.test(channelId)
 
-        const fallback = async () => {
+        const tryFetch = async () => {
             try {
                 const html = await(await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
                 channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
             } catch (_) {}
         }
 
-        // first try getting it from the channel view
-        try {
-            const html = await(await fetch(location.href)).text();
-            const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
-            channelId = html.substring(i, i + 24);
-        } catch (_) {}
+        // try it from the first video/short/stream
+        await tryFetch();
 
-        // then try it from the first video/short/stream
-        if (!pass()) {
-            await fallback();
-        }
-
-        // last resort... wait for a bit and try again
+        // wait for a bit and try again
         if (!pass()) {
             await new Promise(resolve => {
                 setTimeout(() => {
                     (async () => {
-                        await fallback();
+                        await tryFetch();
                         resolve();
                     })();
                 }, 1000);
             });
+        }
+
+        // unreliable in some cases but better than not trying,
+        // getting it from the channel view
+        if (!pass()) {
+            try {
+                const html = await (await fetch(location.href)).text();
+                const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
+                channelId = html.substring(i, i + 24);
+            } catch (_) {}
         }
 
         if (!pass()) {
@@ -470,6 +477,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
+                        .role('button')
                         .unwrap(),
                     element => element.textContent = 'Play Popular',
                 ),
@@ -481,6 +489,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
+                        .role('button')
                         .unwrap(),
                     element => element.textContent = 'Play All',
                 ),
@@ -492,6 +501,7 @@
                     () => buildElement(document.createElement('a'))
                         .className('ytpa-btn ytpa-play-all-btn ytpa-unsupported')
                         .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
+                        .role('button')
                         .target('_blank')
                         .rel('noreferrer')
                         .unwrap(),
@@ -520,7 +530,7 @@
                             () => buildElement(document.createElement('a'))
                                 .className('ytpa-btn-section')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
-                                .rel('button')
+                                .role('button')
                                 .unwrap(),
                             element => element.textContent = 'Play Random',
                         ),
@@ -553,7 +563,7 @@
                     () => buildElement(document.createElement('div'))
                         .className('ytpa-random-popover')
                         .role('menu')
-                        .aria_label('Random play options"')
+                        .aria_label('Random play options')
                         .hidden('')
                         .unwrap(),
                     element => element.append(
@@ -619,6 +629,9 @@
             return;
         }
 
+        // This needs to be this early in the process as otherwise it may use old ids from other channels
+        await refreshId()
+
         // Regenerate button if switched between Latest and Popular
         const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
         if (element) {
@@ -633,8 +646,6 @@
         if (document.querySelector('.ytpa-play-all-btn')) {
             return;
         }
-
-        await refreshId()
 
         // Initially generate button
         apply();
@@ -966,25 +977,36 @@
             `)
 
             const storage = getStorage();
-            playlistContainer.querySelectorAll('#wc-endpoint').forEach(element => {
-                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
-                if (!isWatched(videoId)) {
-                    storage[videoId] = false;
+
+            // ensure all the links are "corrected" to random play
+            const playlistElementsInterval = setInterval(() => {
+                const elements = playlistContainer.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
+                if (elements.length === 0) {
+                    clearInterval(playlistElementsInterval);
+
+                    return;
                 }
 
-                element.href += '&ytpa-random=' + ytpaRandom;
-                // This bypasses the client side routing
-                element.addEventListener('click', event => {
-                    event.preventDefault();
+                elements.forEach(element => {
+                    const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                    if (!isWatched(videoId)) {
+                        storage[videoId] = false;
+                    }
 
-                    window.location.href = element.href;
+                    element.href += '&ytpa-random=' + ytpaRandom;
+                    // This bypasses the client side routing
+                    element.addEventListener('click', event => {
+                        event.preventDefault();
+
+                        window.location.href = element.href;
+                    });
+
+                    const entryKey= getVideoId(element.href);
+                    if (isWatched(entryKey)) {
+                        element.parentElement.setAttribute('hidden', '');
+                    }
                 });
-
-                const entryKey= getVideoId(element.href);
-                if (isWatched(entryKey)) {
-                    element.parentElement.setAttribute('hidden', '');
-                }
-            });
+            }, 1000);
             localStorage.setItem(getStorageKey(), JSON.stringify(storage));
 
             if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {

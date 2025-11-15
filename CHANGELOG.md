@@ -1,5 +1,17 @@
 # YTPA Changelog
 
+## 20251115-1
+
+Slight improvements to stability in edge cases.
+Strong work towards automatic testing. Commands are used to trigger tests.
+
+* Attributes that are not HtmlElement properties are set from safeBuildDynamicHtml.
+* Ensure all links in playlist during random play lead to random play.
+* Minor UI improvements for random play.
+* Made fetching of channelId more reliable when starting at a channel page and navigating to another.
+
+There are now automated testing tools for YTPA, written in [purescript](https://www.purescript.org/) and running [puppeteer](https://pptr.dev/).
+
 ## 20251115-0
 
 Improved compatibility for the browser extension wrapper

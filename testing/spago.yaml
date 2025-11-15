@@ -1,0 +1,36 @@
+package:
+  name: testing
+  dependencies:
+    - aff
+    - console
+    - effect
+    - prelude
+    - strings
+    - toppokki
+    - node-fs
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  packageSet:
+    registry: 68.1.0
+  extraPackages:
+    toppokki:
+      git: https://github.com/justinwoo/purescript-toppokki.git
+      ref: v4.0.0
+      dependencies:
+        - aff
+        - aff-promise
+        - console
+        - effect
+        - exceptions
+        - foreign
+        - functions
+        - node-buffer
+        - node-fs
+        - node-http
+        - nullable
+        - prelude
+        - record
+        - strings
+        - test-unit

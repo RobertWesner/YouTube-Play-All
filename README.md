@@ -101,12 +101,48 @@ If your current installation does not work, please update it by following the in
 
 ## Contributing and Testing
 
+### Basic Tests (easy)
+
 Please use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
 
 1. Install the testing script.
 2. Open your developer tools.
 3. Run `YTPATestSuite.test();`.
 4. Follow the instructions on screen.
+
+### In-Depth Tests (recommended)
+
+### Inside A Container
+
+Either use Docker:
+
+```bash
+docker run --rm -it "$(docker build -q -f Containerfile .)"
+```
+
+Or Podman:
+
+```bash
+podman run --rm -it "$(podman build -q -f Containerfile .)"
+```
+
+Or your other docker-compatible container environment of choice.
+
+### Running Tests Outside Of Containers
+
+To run the automated tests directly, you will need the following tools:
+
+- npm `11.6.2`
+- spago `0.93.44` (get the npm install `spago@next` instead of AUR or other repository)
+- Purescript purs `0.15.15`
+
+```bash
+(
+   cd testing
+   npm i
+   spago run -q
+)
+```
 
 ## License
 
