@@ -629,6 +629,9 @@
             return;
         }
 
+        // This needs to be this early in the process as otherwise it may use old ids from other channels
+        await refreshId()
+
         // Regenerate button if switched between Latest and Popular
         const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
         if (element) {
@@ -643,8 +646,6 @@
         if (document.querySelector('.ytpa-play-all-btn')) {
             return;
         }
-
-        await refreshId()
 
         // Initially generate button
         apply();
