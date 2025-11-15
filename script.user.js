@@ -341,7 +341,7 @@
         /* [2025-11] Fix for the new UI */
         .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
             border-radius: 100px !important;
-            margin-left: 1em;
+            margin-left: 1em !important;
         }
     </style>
     <style id="ytpa-height"></style>`);

@@ -4,6 +4,7 @@
 
 * Attributes that are not HtmlElement properties are set from safeBuildDynamicHtml.
 * Ensure all links in playlist during random play lead to random play.
+* Minor UI improvements for random play.
 
 ## 20251115-0
 
