@@ -7,6 +7,8 @@
 * Minor UI improvements for random play.
 * Made fetching of channelId more reliable when starting at a channel page and navigating to another.
 
+There are now automated testing tools for YTPA, written in [purescript](https://www.purescript.org/) and running via [puppeteer](https://pptr.dev/).
+
 ## 20251115-0
 
 Improved compatibility for the browser extension wrapper
