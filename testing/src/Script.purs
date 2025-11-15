@@ -38,9 +38,7 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    -- TODO: do i need the "_ <-"?
-
-    browser <- T.launch {}
+    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox"] }
     page <- T.newPage browser
 
     T.goto (T.URL "https://youtube.com") page
@@ -98,9 +96,16 @@ script = do
         >>= step "reload-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
                 _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
+                delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
+                delay (Milliseconds 500.0)
                 T.goto (T.URL "https://www.youtube.com/@TechnologyConnections/videos") page'
                 injectUserscript page'
+                delay (Milliseconds 500.0)
+                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
+                delay (Milliseconds 500.0)
+                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
+                delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
                 delay (Milliseconds 500.0)
         )
@@ -159,9 +164,16 @@ script = do
         >>= step "live-latest" "https://www.youtube.com/playlist?list=UULV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
             \page' -> do
                 _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
+                delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
+                delay (Milliseconds 500.0)
                 T.goto (T.URL "https://www.youtube.com/@Insym/streams") page'
                 injectUserscript page'
+                delay (Milliseconds 500.0)
+                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'
+                delay (Milliseconds 500.0)
+                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'
+                delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'
                 delay (Milliseconds 500.0)
         )

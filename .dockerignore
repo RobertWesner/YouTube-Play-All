@@ -1,0 +1,5 @@
+testing/.gitignore
+testing/README.md
+testing/output
+testing/node_modules
+testing/.spago

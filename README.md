@@ -112,13 +112,31 @@ Please use [the testing userscript](https://github.com/RobertWesner/YouTube-Play
 
 ### In-Depth Tests (recommended)
 
-To run the automated tests from source, you will need the following tools:
+### Inside A Container
+
+Either use Docker:
+
+```bash
+docker run --rm -it "$(docker build -q -f Containerfile .)"
+```
+
+Or Podman:
+
+```bash
+podman run --rm -it "$(podman build -q -f Containerfile .)"
+```
+
+Or your other docker-compatible container environment of choice.
+
+### Running Tests Outside Of Containers
+
+To run the automated tests directly, you will need the following tools:
 
 - npm `11.6.2`
 - spago `0.93.44` (get the npm install `spago@next` instead of AUR or other repository)
 - Purescript purs `0.15.15`
 
-```sh
+```bash
 (
    cd testing
    npm i
