@@ -975,25 +975,36 @@
             `)
 
             const storage = getStorage();
-            playlistContainer.querySelectorAll('#wc-endpoint').forEach(element => {
-                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
-                if (!isWatched(videoId)) {
-                    storage[videoId] = false;
+
+            // ensure all the links are "corrected" to random play
+            const playlistElementsInterval = setInterval(() => {
+                const elements = playlistContainer.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
+                if (elements.length === 0) {
+                    clearInterval(playlistElementsInterval);
+
+                    return;
                 }
 
-                element.href += '&ytpa-random=' + ytpaRandom;
-                // This bypasses the client side routing
-                element.addEventListener('click', event => {
-                    event.preventDefault();
+                elements.forEach(element => {
+                    const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                    if (!isWatched(videoId)) {
+                        storage[videoId] = false;
+                    }
 
-                    window.location.href = element.href;
+                    element.href += '&ytpa-random=' + ytpaRandom;
+                    // This bypasses the client side routing
+                    element.addEventListener('click', event => {
+                        event.preventDefault();
+
+                        window.location.href = element.href;
+                    });
+
+                    const entryKey= getVideoId(element.href);
+                    if (isWatched(entryKey)) {
+                        element.parentElement.setAttribute('hidden', '');
+                    }
                 });
-
-                const entryKey= getVideoId(element.href);
-                if (isWatched(entryKey)) {
-                    element.parentElement.setAttribute('hidden', '');
-                }
-            });
+            }, 1000);
             localStorage.setItem(getStorageKey(), JSON.stringify(storage));
 
             if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
