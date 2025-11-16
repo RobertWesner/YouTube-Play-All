@@ -10,6 +10,7 @@ export default defineConfig([
         languageOptions: {
             globals: {
                 ...globals.browser,
+                GM: 'readonly',
                 GM_xmlhttpRequest: 'readonly',
                 GM_info: 'readonly',
             },

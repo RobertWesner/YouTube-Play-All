@@ -42,7 +42,7 @@
 
     const scriptVersion = GM_info.script.version || null;
     if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
-        console.log(
+        console.info(
             '%cYTPA - YouTube Play All\n',
             'color: #bf4bcc; font-size: 32px; font-weight: bold',
             'You are currently running a test version:',
@@ -51,7 +51,7 @@
     }
 
     // TODO: look into rewriting this "trick" to improve quality of this script
-    if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {
+    if (window.getOwnPropertyDescriptor('trustedTypes') && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
 
@@ -393,7 +393,7 @@
             try {
                 const html = await(await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
                 channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
-            } catch (_) {}
+            } finally { /*pass*/ }
         }
 
         // try it from the first video/short/stream
@@ -418,7 +418,7 @@
                 const html = await (await fetch(location.href)).text();
                 const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
                 channelId = html.substring(i, i + 24);
-            } catch (_) {}
+            } finally { /*pass*/ }
         }
 
         if (!pass()) {
@@ -458,7 +458,7 @@
         }
 
         // See: available-lists.md
-        let [allPlaylist, popularPlaylist] = window.location.pathname.endsWith('/videos')
+        const [allPlaylist, popularPlaylist] = window.location.pathname.endsWith('/videos')
             // Normal videos
             // list=UULP has the all videos sorted by popular
             // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
@@ -888,7 +888,7 @@
             if (Array.isArray(getStorage())) {
                 localStorage.removeItem(getStorageKey());
             }
-        } catch (e) {
+        } catch {
             localStorage.removeItem(getStorageKey());
         }
 
@@ -1036,7 +1036,7 @@
             setInterval(() => {
                 const videoId = getVideoId(location.href);
 
-                let params = new URLSearchParams(location.search);
+                const params = new URLSearchParams(location.search);
                 params.set('ytpa-random', ytpaRandom);
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 

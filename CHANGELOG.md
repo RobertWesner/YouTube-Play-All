@@ -1,5 +1,14 @@
 # YTPA Changelog
 
+## development
+
+Added automated validation of userscript with [eslint](https://github.com/eslint/eslint) and [semgrep](https://github.com/semgrep/semgrep).
+
+* Applied eslint recommendations.
+
+`eslint` and `semgrep` are used to check for risky/insecure code inside the userscript.
+This is a measure to build reliability and trust by making it easier to audit the code.
+
 ## 20251115-1
 
 Slight improvements to stability in edge cases.
