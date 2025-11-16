@@ -11,6 +11,7 @@ import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
 import Effect.Class (liftEffect)
 import Node.Process (exit') as Process
+import Control.Monad.Error.Class (catchError)
 
 step :: String -> String -> T.Page -> (T.Page -> Aff Unit) -> Boolean -> Aff Boolean
 step label expected page setup prev = do
@@ -46,8 +47,13 @@ script = do
     setUpUserscript page
     T.goto (T.URL "https://youtube.com") page
 
-    info "Waiting to reject cookies..."
-    waitForAndClick "button[aria-label*=\"Reject the use of cookies\"]" page
+    catchError (do
+        info "Waiting to reject cookies..."
+        waitForAndClick "button[aria-label*=\"Reject the use of cookies\"]" page
+    ) (\_ -> do
+        info "Skipping the wait and attempting to continue..."
+        pure unit
+    )
 
     info "Waiting for refresh to finish..."
     delay (Milliseconds 500.0)
