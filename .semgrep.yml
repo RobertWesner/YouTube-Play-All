@@ -1,0 +1,74 @@
+rules:
+    -   id: js-no-eval-or-new-function
+        message: "Avoid eval / new Function in the userscript."
+        severity: ERROR
+        languages: [ javascript ]
+        patterns:
+            -   pattern: eval(...)
+            -   pattern: new Function(...)
+
+    -   id: js-no-document-cookie
+        message: "YTPA should not access document.cookie."
+        severity: ERROR
+        languages: [ javascript ]
+        pattern: document.cookie
+
+    -   id: js-no-sendbeacon
+        message: "navigator.sendBeacon is not allowed in this script."
+        severity: ERROR
+        languages: [ javascript ]
+        pattern: navigator.sendBeacon(...)
+
+    -   id: js-no-websocket
+        message: "WebSockets are not expected in this userscript. Review necessity."
+        severity: WARNING
+        languages: [ javascript ]
+        pattern: new WebSocket(...)
+
+    -   id: js-fetch-non-whitelisted-domain
+        message: "fetch() URL should be YouTube only. Review this call."
+        severity: WARNING
+        languages: [ javascript ]
+        patterns:
+            -   pattern: fetch($URL, ...)
+            -   metavariable-regex:
+                    metavariable: $URL
+                    regex: ()['"`](?!.*youtube\.com).*['"` ]()
+
+    -   id: js-no-cross-window-postmessage
+        message: "window.postMessage is not expected in this userscript. Review necessity."
+        severity: WARNING
+        languages: [ javascript ]
+        pattern: $OBJ.postMessage(...)
+        metavariables:
+            OBJ: window
+
+    -   id: js-no-location-rewrite-to-non-youtube
+        message: "Changing window.location to non-YouTube domains is suspicious. Review."
+        severity: WARNING
+        languages: [ javascript ]
+        patterns:
+            -   pattern: window.location = $URL
+            -   metavariable-regex:
+                    metavariable: $URL
+                    regex: ()['"`](?!.*youtube\.com).*['"` ]()
+
+    -   id: js-no-location-href-rewrite-to-non-youtube
+        message: "Changing window.location to non-YouTube domains is suspicious. Review."
+        severity: WARNING
+        languages: [ javascript ]
+        patterns:
+            -   pattern: window.location.href = $URL
+            -   metavariable-regex:
+                    metavariable: $URL
+                    regex: ()['"`](?!.*youtube\.com).*['"` ]()
+
+    -   id: js-no-open-non-youtube
+        message: "window.open to non-YouTube domains should be reviewed."
+        severity: WARNING
+        languages: [ javascript ]
+        patterns:
+            -   pattern: window.open($URL, ...)
+            -   metavariable-regex:
+                    metavariable: $URL
+                    regex: ()['"`](?!.*youtube\.com).*['"` ]()
