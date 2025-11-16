@@ -6,6 +6,7 @@ Added automated validation of userscript with [eslint](https://github.com/eslint
 
 * Applied eslint recommendations.
 * Improved reliability of automated testing.
+* Added more steps to manual testing script (`test.user.js`).
 
 `eslint` and `semgrep` are used to check for risky/insecure code inside the userscript.
 This is a measure to build reliability and trust by making it easier to audit the code.

@@ -1,17 +1,33 @@
 // ==UserScript==
 // @name            YouTube Play All Test Suite
 // @description     Tests YTPA to prevent bugs
-// @version         20251111-0
+// @version         20251116-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
 // @match           https://*.youtube.com/*
 // @icon            https://scripts.yt/favicon.ico
+// @downloadURL     https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/test.user.js
+// @updateURL       https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/test.user.js
 // ==/UserScript==
 
-/**
- * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
- */
+// ### ABOUT ###
+//
+// This is a supplementary simplified testing script to verify correctness of YTPA when
+// pipelines are not available and contributors can't use the Puppeteer-based tests.
+//
+// .--------------------------------------------------------------------------.
+// | Note:                                                                    |
+// | This is less complete than scripts within the "testing" directory.       |
+// | This script predates those tests and still offer a lot of basic testing. |
+// | The automation is strongly preferred; this is the fallback.              |
+// '--------------------------------------------------------------------------'
+//
+// ### USAGE ###
+//
+// 1. Visit https://www.youtube.com/
+// 2. Run: YTPATestSuite.test()
+// 3. Follow on-screen instructions
 
 (function () {
     'use strict';
@@ -74,9 +90,9 @@
 
                     setTimeout(() => resolve(), 1000);
                     clearInterval(interval);
-                }, 200);
-            }, 1000);
-        })
+                }, 100);
+            }, 500);
+        });
     };
 
     let suite = null;
@@ -115,6 +131,15 @@
     const getButton = () => document.querySelector('.ytpa-btn.ytpa-play-all-btn:not([data-stale])');
     const markButtonAsStale = () => getButton().setAttribute('data-stale', '');
 
+    const getSearch = () => document.querySelector('.ytSearchboxComponentInput');
+    const getSearchButton = () => document.querySelector('.ytSearchboxComponentSearchButton');
+    const search = async text => {
+        await waitFor(() => !!getSearch());
+        getSearch().value = text;
+        getSearch().dispatchEvent(new Event('input'));
+        getSearchButton().click();
+    };
+
     window.addEventListener('load', () => {
         switch (new URLSearchParams(new URL(window.location.href).search).get('ytpa-test-run')) {
             case 'initial':
@@ -124,21 +149,26 @@
                 unsafeWindow.YTPATestSuite.testVideosFreshLoad();
                 break;
         }
-    })
+    });
 
     Object.defineProperty(unsafeWindow, 'YTPATestSuite', {
         configurable: false,
         writable: false,
         value: Object.freeze({
             test: async () => {
+                if (document.querySelector('[rel="canonical"]').href !== 'https://www.youtube.com/') {
+                    alert('Did not start from a clean base, try again after reloading window.');
+                    window.location.href = 'https://www.youtube.com/';
+                }
+
                 if (document.querySelector('#ytpa-test-suite')) {
                     alert('Tests already running!');
                 }
                 createSuite();
 
-                addStep('home', '[manually] Homepage', 'Navigate to homepage.');
-                addStep('channel', '[manually] @TechnologyConnections', 'Navigate to @TechnologyConnections.');
-                addStep('videos', '[manually] Videos', 'Click on <strong>Videos</strong>.');
+                addStep('home', 'Homepage', 'Start in homepage.');
+                addStep('channel', '@TechnologyConnections', 'Navigate to @TechnologyConnections.');
+                addStep('videos', 'Videos', 'Click on <strong>Videos</strong>.');
                 addStep('latest', 'Latest Videos', 'Checking for correct URL.');
                 addStep('popular', 'Popular Videos', 'Checking for correct URL.');
                 addStep('latest-repeat', 'Latest Videos (again)', 'Checking for correct URL.');
@@ -147,8 +177,15 @@
 
                 await waitFor(() => window.location.href.endsWith('.youtube.com/'));
                 completeStep('home');
+
+                await search('TechnologyConnections')
+                await waitFor(() => !!document.querySelector('[href="/@TechnologyConnections"]'));
+                document.querySelector('[href="/@TechnologyConnections"]').click();
                 await waitFor(() => window.location.href.endsWith('.youtube.com/@TechnologyConnections'));
                 completeStep('channel');
+
+                await waitFor(() => !!document.querySelector('[tab-title="Videos"]'));
+                document.querySelector('[tab-title="Videos"]').click();
                 await waitFor(() => window.location.href.endsWith('.youtube.com/@TechnologyConnections/videos'));
                 completeStep('videos');
 
@@ -190,7 +227,7 @@
                 document.querySelector('#primary #chips > :nth-child(1), #filter-chip-bar > div > :nth-child(1)').click();
                 await waitFor(() => !!getButton());
 
-                window.location.href = '/@TechnologyConnections/videos?ytpa-test-run=videos'
+                window.location.href = '/@TechnologyConnections/videos?ytpa-test-run=videos';
             },
             testVideosFreshLoad: async () => {
                 if (document.querySelector('#ytpa-test-suite')) {
@@ -202,6 +239,9 @@
                 addStep('popular', 'Popular Videos', 'Checking for correct URL.');
                 addStep('latest-repeat', 'Latest Videos (again)', 'Checking for correct URL.');
                 addStep('popular-repeat', 'Popular Videos (again)', 'Checking for correct URL.');
+                addStep('crd-videos', 'CRD Videos', 'Checking for correct URL.');
+                addStep('crd-shorts', 'CRD Shorts', 'Checking for correct URL.');
+                addStep('crd-shorts-popular', 'CRD Latest Shorts', 'Checking for correct URL.');
                 addStep('success', 'Success', 'All done!');
 
                 await waitFor(() => !!getButton());
@@ -239,8 +279,40 @@
                     failStep('popular-repeat');
                 }
 
-                document.querySelector('#primary #chips > :nth-child(1), #filter-chip-bar > div > :nth-child(1)').click();
+                await search('Cathode Ray Dude CRD');
+                await waitFor(() => !!document.querySelector('[href="/@CathodeRayDude"]'));
+                document.querySelector('[href="/@CathodeRayDude"]').click();
+                await waitFor(() => !!document.querySelector('[tab-title="Videos"]'));
+                document.querySelector('[tab-title="Videos"]').click();
                 await waitFor(() => !!getButton());
+                if (getButton().href.endsWith('.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1')) {
+                    completeStep('crd-videos');
+                    markButtonAsStale();
+                } else {
+                    failStep('crd-videos');
+                }
+
+                await waitFor(() => !!document.querySelector('[tab-title="Shorts"]'));
+                document.querySelector('[tab-title="Shorts"]').click();
+                await waitFor(() => !!getButton());
+                if (getButton().href.endsWith('.youtube.com/playlist?list=UUSHXnNibvR_YIdyPs8PZIBoEw&playnext=1')) {
+                    completeStep('crd-shorts');
+                    markButtonAsStale();
+                } else {
+                    failStep('crd-shorts');
+                }
+
+                document.querySelector('#primary #chips > :nth-child(2), #filter-chip-bar > div > :nth-child(2)').click();
+                await waitFor(() => !!getButton());
+                if (getButton().href.endsWith('.youtube.com/playlist?list=UUPSXnNibvR_YIdyPs8PZIBoEw&playnext=1')) {
+                    completeStep('crd-shorts-popular');
+                    markButtonAsStale();
+                } else {
+                    failStep('crd-shorts-popular');
+                }
+
+                // DONE
+
                 completeStep('success');
                 alert('All tests passed!');
                 suite.remove();
@@ -248,3 +320,7 @@
         }),
     });
 })();
+
+/**
+ * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
+ */
