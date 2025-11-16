@@ -1,15 +1,16 @@
 <div align="center">
-    <h1>YouTube Play All</h1>
-    <a href="#installation">Installation</a> |
-    <a href="#usage">Usage</a> |
-    <a href="#issues">Issues</a> |
-    <a href="#license">License</a>
-    <p>
-        <strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
-    </p>
-    <a href="https://forms.gle/UV9icRvkkaxs1Jnn6" aria-label="provide feedback" role="button">
-        <img src="./readme/button_feedback.png" tabindex="-1" height="32">
-    </a>
+<h1>YouTube Play All</h1>
+<a href="#installation">Installation</a> |
+<a href="#usage">Usage</a> |
+<a href="#issues">Issues</a> |
+<a href="#license">License</a> |
+<a href="./PRIVACY.md">Privacy</a>
+<p>
+<strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
+</p>
+<a href="https://forms.gle/UV9icRvkkaxs1Jnn6" aria-label="provide feedback" role="button">
+<img src="./readme/button_feedback.png" tabindex="-1" height="32">
+</a>
 </div>
 
 ---
