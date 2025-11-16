@@ -21,13 +21,13 @@ rules:
 
     -   id: js-no-websocket
         message: "WebSockets are not expected in this userscript. Review necessity."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         pattern: new WebSocket(...)
 
     -   id: js-fetch-non-whitelisted-domain
         message: "fetch() URL should be YouTube only. Review this call."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: fetch($URL, ...)
@@ -37,7 +37,7 @@ rules:
 
     -   id: js-no-cross-window-postmessage
         message: "window.postMessage is not expected in this userscript. Review necessity."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         pattern: $OBJ.postMessage(...)
         metavariables:
@@ -45,7 +45,7 @@ rules:
 
     -   id: js-no-location-rewrite-to-non-youtube
         message: "Changing window.location to non-YouTube domains is suspicious. Review."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.location = $URL
@@ -55,7 +55,7 @@ rules:
 
     -   id: js-no-location-href-rewrite-to-non-youtube
         message: "Changing window.location to non-YouTube domains is suspicious. Review."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.location.href = $URL
@@ -65,7 +65,7 @@ rules:
 
     -   id: js-no-open-non-youtube
         message: "window.open to non-YouTube domains should be reviewed."
-        severity: WARNING
+        severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.open($URL, ...)

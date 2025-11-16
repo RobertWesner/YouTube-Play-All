@@ -9,6 +9,8 @@ import Data.Time.Duration (Milliseconds(Milliseconds))
 import Foreign (isNull, isUndefined, readString)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
+import Effect.Class (liftEffect)
+import Node.Process (exit') as Process
 
 step :: String -> String -> T.Page -> (T.Page -> Aff Unit) -> Boolean -> Aff Boolean
 step label expected page setup prev = do
@@ -180,10 +182,12 @@ script = do
                 delay (Milliseconds 500.0)
         )
 
-    if result == true
-        then info "ALL TESTS PASSED!"
-        else info "UNFORTUNATE FAILURE..."
-
     -- Shutdown
 
     T.close browser
+
+    if result == true
+        then  info "ALL TESTS PASSED!"
+        else do
+            info "UNFORTUNATE FAILURE..."
+            liftEffect $ Process.exit' 1

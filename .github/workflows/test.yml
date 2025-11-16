@@ -1,0 +1,20 @@
+name: Test with puppeteer
+on:
+    pull_request:
+    push:
+        branches: [ development, main ]
+    workflow_dispatch:
+
+jobs:
+    docker-test:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+
+            - name: Build and run Containerfile
+              run: |
+                  IMAGE_ID=$(docker build -q -f Containerfile .)
+                  echo "Built image: $IMAGE_ID"
+                  docker run --rm "$IMAGE_ID"
