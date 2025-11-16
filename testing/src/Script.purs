@@ -57,7 +57,7 @@ script = do
 
     info "Waiting for refresh to finish..."
     delay (Milliseconds 500.0)
-    _ <- T.pageWaitForSelector (T.Selector "[aria-label*=\"Your YouTube history is off\"]") {} page
+    _ <- T.pageWaitForSelector (T.Selector "[aria-label*=\"Your YouTube history is off\"],[aria-label=\"Try searching to get started\"]") {} page
     delay (Milliseconds 1000.0)
 
     -- Actual testing
