@@ -1,4 +1,4 @@
-name: Test with puppeteer
+name: Tests
 on:
     pull_request:
     push:

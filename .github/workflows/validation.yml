@@ -1,4 +1,4 @@
-name: Verify with eslint and semgrep
+name: Validation
 on:
     pull_request:
     push:
