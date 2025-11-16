@@ -51,7 +51,7 @@
     }
 
     // TODO: look into rewriting this "trick" to improve quality of this script
-    if (window.getOwnPropertyDescriptor('trustedTypes') && !window.trustedTypes.defaultPolicy) {
+    if ('trustedTypes' in window && !window.trustedTypes.defaultPolicy) {
         window.trustedTypes.createPolicy('default', { createHTML: string => string });
     }
 

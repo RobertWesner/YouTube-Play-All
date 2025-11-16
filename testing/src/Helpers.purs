@@ -6,15 +6,15 @@ import Effect.Aff (Aff)
 import Node.FS.Aff (readTextFile)
 import Node.Encoding (Encoding(UTF8))
 
-injectScript :: String -> T.Page -> Aff Unit
-injectScript script page =
-    void $ T.unsafeEvaluateStringFunction script page
+setUpJS :: String -> T.Page -> Aff Unit
+setUpJS script page =
+    void $ T.unsafeEvaluateOnNewDocument ("document.addEventListener('DOMContentLoaded', () => {\n" <> script <> "\n});") page
 
-injectUserscript :: T.Page -> Aff Unit
-injectUserscript page = do
+setUpUserscript :: T.Page -> Aff Unit
+setUpUserscript page = do
     src <- readTextFile UTF8 "../script.user.js"
-    injectScript "window.GM_info = { script: { version: '21110101-0-test' } };" page
-    injectScript src page
+    setUpJS "window.GM_info = { script: { version: '21110101-0-test' } };" page
+    setUpJS src page
 
 waitForAndClick :: String -> T.Page -> Aff Unit
 waitForAndClick selector page = do

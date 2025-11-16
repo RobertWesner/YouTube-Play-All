@@ -4,7 +4,7 @@ import Prelude
 import Toppokki as T
 import Effect.Aff (Aff, delay)
 import Info (info)
-import Helpers (injectUserscript, waitForAndClick, ytpaSelector)
+import Helpers (setUpUserscript, waitForAndClick, ytpaSelector)
 import Data.Time.Duration (Milliseconds(Milliseconds))
 import Foreign (isNull, isUndefined, readString)
 import Control.Monad.Except (runExcept)
@@ -41,6 +41,7 @@ script = do
     browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox"] }
     page <- T.newPage browser
 
+    setUpUserscript page
     T.goto (T.URL "https://youtube.com") page
 
     info "Waiting to reject cookies..."
@@ -49,8 +50,6 @@ script = do
     info "Waiting for refresh to finish..."
     delay (Milliseconds 500.0)
     _ <- T.pageWaitForSelector (T.Selector "[aria-label*=\"Your YouTube history is off\"]") {} page
-    delay (Milliseconds 1000.0)
-    injectUserscript page
     delay (Milliseconds 1000.0)
 
     -- Actual testing
@@ -100,7 +99,6 @@ script = do
                 _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
                 delay (Milliseconds 500.0)
                 T.goto (T.URL "https://www.youtube.com/@TechnologyConnections/videos") page'
-                injectUserscript page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
                 delay (Milliseconds 500.0)
@@ -168,7 +166,6 @@ script = do
                 _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
                 delay (Milliseconds 500.0)
                 T.goto (T.URL "https://www.youtube.com/@Insym/streams") page'
-                injectUserscript page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'
                 delay (Milliseconds 500.0)
