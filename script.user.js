@@ -740,10 +740,11 @@
             }
 
             const params = new URLSearchParams(window.location.search);
-            const list = params.get('list');
-            if (params.has('ytpa-random')) {
+            if (!params.has('list') || params.has('ytpa-random')) {
                 return;
             }
+
+            const list = params.get('list');
 
             // prevent playlist emulation on queue
             // its impossible to fetch that playlist externally anyway
