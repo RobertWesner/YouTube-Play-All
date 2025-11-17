@@ -38,7 +38,7 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox"], headless: false }
+    browser <- T.launch { args: ["--no-sandbox", "--disable-setuid-sandbox"] }
     page <- T.newPage browser
 
     T.goto (T.URL "https://youtube.com") page
@@ -211,39 +211,49 @@ script = do
                 waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
+        -- Test 1: Veritasium Videos (Latest)
         >>= step "veritasium-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
-                delay (Milliseconds 500.0)
-                waitForAndClick ".ytSearchboxComponentClearButton" page'
-                delay (Milliseconds 500.0)
-                T.type_ (T.Selector ".ytSearchboxComponentInput") "Veritasium" {} page'
-                delay (Milliseconds 500.0)
-                T.click (T.Selector ".ytSearchboxComponentSearchButton") page'
-                delay (Milliseconds 500.0)
-                let channelLinkSelector = ".channel-link[href^=\"/@veritasium\"]"
-                _ <- T.pageWaitForSelector (T.Selector channelLinkSelector) {} page'
-                T.click (T.Selector channelLinkSelector) page'
-                delay (Milliseconds 500.0)
-                waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page'
-                delay (Milliseconds 500.0)
+                T.goto (T.URL "https://www.youtube.com/@veritasium/videos") page'
+                injectUserscript page'
+                delay (Milliseconds 1000.0)
         )
-        >>= step "veritasium-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
+
+        -- Test 2: Veritasium Videos (Popular)
+        >>= step "veritasium-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
-                delay (Milliseconds 500.0)
-                waitForAndClick ".ytSearchboxComponentClearButton" page'
-                delay (Milliseconds 500.0)
-                T.type_ (T.Selector ".ytSearchboxComponentInput") "Veritasium" {} page'
-                delay (Milliseconds 500.0)
-                T.click (T.Selector ".ytSearchboxComponentSearchButton") page'
-                delay (Milliseconds 500.0)
-                let channelLinkSelector = ".channel-link[href^=\"/@veritasium\"]"
-                _ <- T.pageWaitForSelector (T.Selector channelLinkSelector) {} page'
-                T.click (T.Selector channelLinkSelector) page'
-                delay (Milliseconds 500.0)
-                waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page'
-                delay (Milliseconds 500.0)
+                waitForAndClick "#chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                delay (Milliseconds 1000.0)
+        )
+
+        -- Test 3: 3Blue1Brown Videos (Latest)
+        >>= step "3b1b-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
+            \page' -> do
+                T.goto (T.URL "https://www.youtube.com/@3blue1brown/videos") page'
+                injectUserscript page'
+                delay (Milliseconds 1000.0)
+        )
+
+        -- Test 4: 3Blue1Brown Videos (Popular)
+        >>= step "3b1b-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
+            \page' -> do
+                waitForAndClick "#chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                delay (Milliseconds 1000.0)
+        )
+
+        -- Test 5: Tom Scott Videos (Latest)
+        >>= step "tomscott-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
+            \page' -> do
+                T.goto (T.URL "https://www.youtube.com/@TomScottGo/videos") page'
+                injectUserscript page'
+                delay (Milliseconds 1000.0)
+        )
+
+        -- Test 6: Tom Scott Videos (Popular)
+        >>= step "tomscott-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
+            \page' -> do
+                waitForAndClick "#chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                delay (Milliseconds 1000.0)
         )
         >>= step "mythbusters-fallback-shorts-latest" "https://www.youtube.com/playlist?list=UUSHhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
             \page' -> do
