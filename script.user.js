@@ -37,8 +37,41 @@
 // GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
-(async function () {
+(async function __ytpa_root_call__() {
     'use strict';
+
+    const handleError = e => {
+        console.error(
+            '%cYTPA - YouTube Play All\n',
+            'color: #bf4bcc; font-size: 32px; font-weight: bold',
+            e,
+        );
+    };
+    window.addEventListener('unhandledrejection',  event => {
+        const e = event.reason || event;
+        const stack = (e && e.stack) || '';
+
+        if (!stack || !stack.includes('__ytpa_root_call__')) {
+            return;
+        }
+
+        handleError(e);
+    });
+    const safeWrapCall = fn => ((...args) => {
+        try {
+            let result = fn(...args)
+            if (result instanceof Promise) {
+                result = result.catch(handleError);
+            }
+
+            return result
+        } catch (e) {
+            handleError(e);
+        }
+    });
+    const safeTimeout = (fn, duration) => setTimeout(safeWrapCall(fn), duration);
+    const safeInterval = (fn, duration) => setInterval(safeWrapCall(fn), duration);
+    const safeEventListener = (node, event, fn) => node.addEventListener(event, safeWrapCall(fn));
 
     const scriptVersion = GM_info.script.version || null;
     if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
@@ -402,7 +435,7 @@
         // wait for a bit and try again
         if (!pass()) {
             await new Promise(resolve => {
-                setTimeout(() => {
+                safeTimeout(() => {
                     (async () => {
                         await tryFetch();
                         resolve();
@@ -512,7 +545,7 @@
 
         if (location.host === 'm.youtube.com') {
             // YouTube returns an "invalid response" when using client side routing for playnext=1 on mobile
-            document.querySelectorAll('.ytpa-btn').forEach(btn => btn.addEventListener('click', event => {
+            document.querySelectorAll('.ytpa-btn').forEach(btn => safeEventListener(btn, 'click', event => {
                 event.preventDefault();
 
                 window.location.href = btn.href;
@@ -604,15 +637,15 @@
                 document.querySelector('.ytpa-random-btn-tab-fix').focus();
             };
 
-            randomMoreOptionsBtn.addEventListener('click', showPopover);
-            randomMoreOptionsBtn.addEventListener('keydown', event => {
+            safeEventListener(randomMoreOptionsBtn, 'click', showPopover);
+            safeEventListener(randomMoreOptionsBtn, 'keydown', event => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     showPopover();
                 }
             });
-            randomPopover.addEventListener('mouseleave', hidePopover);
-            randomPopover.querySelector('a:last-of-type').addEventListener('focusout', hidePopover);
+            safeEventListener(randomPopover, 'mouseleave', hidePopover);
+            safeEventListener(randomPopover.querySelector('a:last-of-type'), 'focusout', hidePopover);
         }
     };
 
@@ -658,10 +691,10 @@
     if (location.host === 'm.youtube.com') {
         // The "yt-navigate-finish" event does not fire on mobile
         // Unfortunately pushState is triggered before the navigation occurs, so a Proxy is useless
-        setInterval(addButton, 1000);
+        safeInterval(addButton, 1000);
     } else {
-        window.addEventListener('yt-navigate-start', removeButton);
-        window.addEventListener('yt-navigate-finish', addButton);
+        safeEventListener(window, 'yt-navigate-start', removeButton);
+        safeEventListener(window, 'yt-navigate-finish', addButton);
     }
 
     // Fallback playlist emulation
@@ -708,7 +741,7 @@
                     element.className = 'item';
                     element.textContent = item.title;
                     element.setAttribute('data-id', item.videoId);
-                    element.addEventListener('click', () => redirect(item.videoId, list));
+                    safeEventListener(element, 'click', () => redirect(item.videoId, list));
 
                     itemsContainer.append(element);
                 },
@@ -796,7 +829,7 @@
 
             getItems(list).then(response => {
                 if (response.status === 'running') {
-                    setTimeout(() => getItems(list).then(response => processItems(response.items)), 5000);
+                    safeTimeout(() => getItems(list).then(response => processItems(response.items)), 5000);
 
                     return;
                 }
@@ -804,7 +837,7 @@
                 processItems(response.items);
             });
 
-            const nextButtonInterval = setInterval(() => {
+            const nextButtonInterval = safeInterval(() => {
                 const nextButton = document.querySelector('#ytd-player .ytp-next-button.ytp-button:not([ytpa-emulation="applied"])');
                 if (nextButton) {
                     clearInterval(nextButtonInterval);
@@ -815,13 +848,13 @@
                     nextButton.replaceWith(newButton);
 
                     newButton.setAttribute('ytpa-emulation', 'applied');
-                    newButton.addEventListener('click', () => playNextEmulationItem());
+                    safeEventListener(newButton, 'click', () => playNextEmulationItem());
                 }
             }, 1000);
 
             // TODO: this does not look like it is called on the new UI,
             //       the new UI seems to preserves the GET-parameter on its own.
-            document.body.addEventListener('keydown', event => {
+            safeEventListener(document.body, 'keydown', event => {
                 // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
                     event.stopImmediatePropagation();
@@ -831,7 +864,7 @@
                 }
             }, true);
 
-            setInterval(() => {
+            safeInterval(() => {
                 const player = getPlayer();
                 const progressState = player.getProgressState();
 
@@ -851,7 +884,7 @@
         if (location.host === 'm.youtube.com') {
             // TODO: mobile playlist emulation
         } else {
-            window.addEventListener('yt-navigate-finish', () => setTimeout(emulatePlaylist, 1000));
+            safeEventListener(window, 'yt-navigate-finish', () => safeTimeout(emulatePlaylist, 1000));
         }
     })();
 
@@ -980,7 +1013,7 @@
             const storage = getStorage();
 
             // ensure all the links are "corrected" to random play
-            const playlistElementsInterval = setInterval(() => {
+            const playlistElementsInterval = safeInterval(() => {
                 const elements = playlistContainer.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
                 if (elements.length === 0) {
                     clearInterval(playlistElementsInterval);
@@ -996,7 +1029,7 @@
 
                     element.href += '&ytpa-random=' + ytpaRandom;
                     // This bypasses the client side routing
-                    element.addEventListener('click', event => {
+                    safeEventListener(element, 'click', event => {
                         event.preventDefault();
 
                         window.location.href = element.href;
@@ -1016,7 +1049,7 @@
                 return;
             }
 
-            document.addEventListener('keydown', event => {
+            safeEventListener(document, 'keydown', event => {
                 // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
                     event.stopImmediatePropagation();
@@ -1034,7 +1067,7 @@
             }
             isIntervalSet = true;
 
-            setInterval(() => {
+            safeInterval(() => {
                 const videoId = getVideoId(location.href);
 
                 const params = new URLSearchParams(location.search);
@@ -1067,7 +1100,7 @@
                     nextButton.replaceWith(newButton);
 
                     newButton.setAttribute('ytpa-random', 'applied');
-                    newButton.addEventListener('click', event => {
+                    safeEventListener(newButton, 'click', event => {
                         markWatched(videoId);
                         playNextRandom();
                     });
@@ -1075,15 +1108,9 @@
             }, 500);
         };
 
-        setInterval(applyRandomPlay, 1000);
+        safeInterval(applyRandomPlay, 1000);
     })();
-})().catch(
-    error => console.error(
-        '%cYTPA - YouTube Play All\n',
-        'color: #bf4bcc; font-size: 32px; font-weight: bold',
-        error,
-    )
-);
+})();
 
 /**
  * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
