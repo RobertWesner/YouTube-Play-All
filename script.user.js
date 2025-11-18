@@ -756,6 +756,12 @@
         };
 
         const playNextEmulationItem = () => {
+            // prevent the bug that occurs when clicking on the channel from playlist emulation
+            // and then navigating to videos whilst mini-player is still open
+            if (window.location.pathname !== '/watch') {
+                return;
+            }
+
             document.querySelector(`.ytpa-playlist-emulator .items .item[data-current] + .item`)?.click();
         };
 
