@@ -47,7 +47,7 @@
             e,
         );
     };
-    window.addEventListener('unhandledrejection',  event => {
+    window.addEventListener('unhandledrejection', event => {
         const e = event.reason || event;
         const stack = (e && e.stack) || '';
 
@@ -59,12 +59,12 @@
     });
     const safeWrapCall = fn => ((...args) => {
         try {
-            let result = fn(...args)
+            let result = fn(...args);
             if (result instanceof Promise) {
                 result = result.catch(handleError);
             }
 
-            return result
+            return result;
         } catch (e) {
             handleError(e);
         }
@@ -127,7 +127,7 @@
 
                     return proxy;
                 };
-            }
+            },
         });
 
         return proxy;
@@ -401,12 +401,12 @@
                         'url': `/watch?v=${v}&list=${list}${ytpaRandom !== null ? `&ytpa-random=${ytpaRandom}` : ''}`,
                         'webPageType': 'WEB_PAGE_TYPE_WATCH',
                         'rootVe': 3832, // ??? required though
-                    }
+                    },
                 },
                 'watchEndpoint': {
                     'videoId': v,
                     'playlistId': list,
-                }
+                },
             };
             document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
             redirector.click();
@@ -420,14 +420,16 @@
     const refreshId = async () => {
         let channelId = '';
 
-        const pass = () => /UC[\w_-]+/.test(channelId)
+        const pass = () => /UC[\w_-]+/.test(channelId);
 
         const tryFetch = async () => {
             try {
-                const html = await(await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
+                const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
                 channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
-            } finally { /*pass*/ }
-        }
+            } finally {
+                // pass
+            }
+        };
 
         // try it from the first video/short/stream
         await tryFetch();
@@ -451,26 +453,24 @@
                 const html = await (await fetch(location.href)).text();
                 const i = html.indexOf('<link rel="canonical" href="https://www.youtube.com/channel/UC') + 60;
                 channelId = html.substring(i, i + 24);
-            } finally { /*pass*/ }
+            } finally {
+                // pass
+            }
         }
 
         if (!pass()) {
-            console.error(
-                '%cYTPA - YouTube Play All\n',
-                'color: #bf4bcc; font-size: 32px; font-weight: bold',
-                'Could not determine channelId...',
-            );
+            handleError('Could not determine channelId...');
 
             return;
         }
 
         id = channelId.substring(2);
-    }
+    };
 
     const apply = () => {
         document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
             document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer')?.offsetHeight ?? 32
-        }px; }`
+        }px; }`;
 
         if (id === '') {
             // do not apply prematurely, caused by mutation observer
@@ -663,7 +663,7 @@
         }
 
         // This needs to be this early in the process as otherwise it may use old ids from other channels
-        await refreshId()
+        await refreshId();
 
         // Regenerate button if switched between Latest and Popular
         const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
@@ -671,7 +671,7 @@
             observer.observe(element, {
                 attributes: true,
                 childList: false,
-                subtree: false
+                subtree: false,
             });
         }
 
@@ -711,7 +711,7 @@
                         requestType: `YTPA ${GM_info.script.version}`,
                     }),
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
                     onload: response => {
                         resolve(JSON.parse(response.responseText));
@@ -760,7 +760,7 @@
                 existing.removeAttribute('data-current');
             }
 
-            const current = document.querySelector(`.ytpa-playlist-emulator .items .item[data-id="${videoId}"]`)
+            const current = document.querySelector(`.ytpa-playlist-emulator .items .item[data-id="${videoId}"]`);
             if (current) {
                 current.setAttribute('data-current', '');
                 current.parentElement.scrollTop = current.offsetTop - 12 * parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -911,7 +911,7 @@
 
         const isWatched = videoId => getStorage()[videoId] || false;
         const markWatched = videoId => {
-            localStorage.setItem(getStorageKey(), JSON.stringify({...getStorage(), [videoId]: true }));
+            localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(), [videoId]: true }));
             document.querySelectorAll(`#wc-endpoint[href*="${videoId}"]`).forEach(
                 element => element.parentElement.setAttribute('hidden', ''),
             );
@@ -933,13 +933,13 @@
                 return;
             }
 
-            getPlayer().pauseVideo()
+            getPlayer().pauseVideo();
 
             const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
             const params = new URLSearchParams(window.location.search);
 
             // Either one fifth or at most the 20 newest.
-            const preferenceRange = Math.max(1, Math.min(Math.min(videos.length * 0.2, 20)))
+            const preferenceRange = Math.max(1, Math.min(Math.min(videos.length * 0.2, 20)));
 
             let videoIndex;
             switch (ytpaRandom) {
@@ -975,12 +975,12 @@
                             'url': `/watch?v=${videos[videoIndex][0]}&list=${params.get('list')}&ytpa-random=${ytpaRandom}`,
                             'webPageType': 'WEB_PAGE_TYPE_WATCH',
                             'rootVe': 3832, // ??? required though
-                        }
+                        },
                     },
                     'watchEndpoint': {
                         'videoId': videos[videoIndex][0],
                         'playlistId': params.get('list'),
-                    }
+                    },
                 };
                 document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
                 redirector.click();
@@ -1008,7 +1008,7 @@
                     This playlist is using random play.<br>
                     The videos will <strong>not be played in the order</strong> listed here.
                 </div>
-            `)
+            `);
 
             const storage = getStorage();
 
@@ -1035,7 +1035,7 @@
                         window.location.href = element.href;
                     });
 
-                    const entryKey= getVideoId(element.href);
+                    const entryKey = getVideoId(element.href);
                     if (isWatched(entryKey)) {
                         element.parentElement.setAttribute('hidden', '');
                     }
