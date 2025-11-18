@@ -83,11 +83,6 @@
         );
     }
 
-    // TODO: look into rewriting this "trick" to improve quality of this script
-    if ('trustedTypes' in window && !window.trustedTypes.defaultPolicy) {
-        window.trustedTypes.createPolicy('default', { createHTML: string => string });
-    }
-
     /**
      * Static checkers dislike insertAdjacentHtml(), so we take extra steps,
      * even if the original values are already safe.
@@ -108,7 +103,7 @@
     /**
      * @return WrappedElementBuilder
      */
-    const buildElement = (element) => {
+    const buildElement = element => {
         /** @var {WrappedElementBuilder} */
         const proxy = new Proxy(element, {
             get(target, prop, _) {
@@ -133,7 +128,16 @@
         return proxy;
     };
 
-    document.head.insertAdjacentHTML('beforeend', `<style>
+    const safeInjectStyle = (id, style) => document.head.insertAdjacentElement('beforeend', safeBuildDynamicHtml(
+        () => buildElement(document.createElement('style'))
+            .id(id)
+            .unwrap(),
+        element => element.textContent = style,
+    ));
+
+    safeInjectStyle('ytpa-height', '');
+    // language=css
+    safeInjectStyle('ytpa-style', `
         .ytpa-btn {
             border-radius: 8px;
             font-family: 'Roboto', 'Arial', sans-serif;
@@ -376,8 +380,7 @@
             border-radius: 100px !important;
             margin-left: 1em !important;
         }
-    </style>
-    <style id="ytpa-height"></style>`);
+    `);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -486,7 +489,7 @@
         // #5: add a custom container for buttons if Latest/Popular/Oldest is missing
         if (parent === null) {
             const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer');
-            grid.insertAdjacentHTML('afterbegin', '<div class="ytpa-button-container"></div>');
+            grid.insertAdjacentElement('afterbegin', buildElement(document.createElement('div')).className('ytpa-button-container').unwrap());
             parent = grid.querySelector('.ytpa-button-container');
         }
 
@@ -576,7 +579,7 @@
                                 .aria_haspopup('menu')
                                 .aria_expanded('false')
                                 .unwrap(),
-                            element => element.innerHTML = '&#x25BE',
+                            element => element.textContent = '▾',
                         ),
                         safeBuildDynamicHtml(
                             () => buildElement(document.createElement('span'))
@@ -584,7 +587,7 @@
                                 .tabindex('-1')
                                 .aria_hidden('true')
                                 .unwrap(),
-                            element => element.innerHTML = '&#x25BE',
+                            element => element.textContent = '▾',
                         ),
                     ),
                 ),
@@ -811,21 +814,36 @@
                 return;
             }
 
-            const playlistEmulator = document.createElement('div');
-            playlistEmulator.className = 'ytpa-playlist-emulator';
-            playlistEmulator.innerHTML = `
-                <div class="title">
-                    Playlist emulator
-                </div>
-                <div class="information">
-                    It looks like YouTube is unable to handle this large playlist.
-                    Playlist emulation is a <b>limited</b> fallback feature of YTPA to enable you to watch even more content. <br>
-                </div>
-                <div class="items"></div>
-                <div class="footer"></div>
-            `;
-            playlistEmulator.setAttribute('data-list', list);
-            document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist').insertAdjacentElement('afterend', playlistEmulator);
+            document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist')
+                .insertAdjacentElement('afterend', safeBuildDynamicHtml(
+                    () => buildElement(document.createElement('div'))
+                        .className('ytpa-playlist-emulator')
+                        .data_list(list)
+                        .unwrap(),
+                    element => element.append(
+                        safeBuildDynamicHtml(
+                            () => buildElement(document.createElement('div'))
+                                .className('title')
+                                .unwrap(),
+                            element => element.textContent = 'Playlist emulator',
+                        ),
+                        safeBuildDynamicHtml(
+                            () => buildElement(document.createElement('div'))
+                                .className('information')
+                                .unwrap(),
+                            element => element.textContent = `
+                            It looks like YouTube is unable to handle this large playlist.
+                            Playlist emulation is a limited fallback feature of YTPA to enable you to watch even more content.
+                        `.trim(),
+                        ),
+                        buildElement(document.createElement('div'))
+                            .className('items')
+                            .unwrap(),
+                        buildElement(document.createElement('footer'))
+                            .className('footer')
+                            .unwrap(),
+                    )
+                ));
 
             getItems(list).then(response => {
                 if (response.status === 'running') {
@@ -1003,12 +1021,19 @@
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
-            playlistContainer.querySelector('.header').insertAdjacentHTML('afterend', `
-                <div class="ytpa-random-notice">
-                    This playlist is using random play.<br>
-                    The videos will <strong>not be played in the order</strong> listed here.
-                </div>
-            `);
+            playlistContainer.insertAdjacentElement('afterbegin', safeBuildDynamicHtml(
+                () => buildElement(document.createElement('div')).className('ytpa-random-notice').unwrap(),
+                element => element.append(
+                    document.createTextNode('This playlist is using random play.'),
+                    document.createElement('br'),
+                    document.createTextNode('The videos will '),
+                    safeBuildDynamicHtml(
+                        () => document.createElement('strong'),
+                        element => element.textContent = 'not be played in the order',
+                    ),
+                    document.createTextNode(' listed here.'),
+                ),
+            ));
 
             const storage = getStorage();
 
@@ -1113,9 +1138,6 @@
 })();
 
 /**
- * @var {{ defaultPolicy: any, createPolicy: (string, Object) => void }} window.trustedTypes
- */
-/**
  * @var {{ xmlHttpRequest: (object) => void }} GM
  */
 /**
@@ -1124,6 +1146,7 @@
 /**
  * @typedef {Object} WrappedElementBuilder
  * @property {() => HTMLElement} unwrap
+ * @property {(string) => WrappedElementBuilder} id
  * @property {(string) => WrappedElementBuilder} className
  * @property {(string) => WrappedElementBuilder} href
  * @property {(string) => WrappedElementBuilder} target
@@ -1136,4 +1159,5 @@
  * @property {(string) => WrappedElementBuilder} aria_haspopup
  * @property {(string) => WrappedElementBuilder} aria_expanded
  * @property {(string) => WrappedElementBuilder} aria_hidden
+ * @property {(string) => WrappedElementBuilder} data_list
  */

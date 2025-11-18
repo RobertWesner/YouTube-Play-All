@@ -80,3 +80,14 @@ rules:
             -   metavariable-regex:
                     metavariable: $URL
                     regex: ()['"`](?!.*youtube\.com).*['"` ]()
+
+    -   id: no-unsafe-html-sinks
+        languages: [ javascript ]
+        message: "HTML string sinks are forbidden. Use builder."
+        severity: ERROR
+        pattern-either:
+            -   pattern: $EL.innerHTML = $VAL
+            -   pattern: $EL.outerHTML = $VAL
+            -   pattern: $EL.insertAdjacentHTML($POS, $VAL)
+            -   pattern: document.write($VAL)
+            -   pattern: document.writeln($VAL)
