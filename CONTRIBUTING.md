@@ -6,6 +6,10 @@ Please prevent direct usage of `setTimeout()`, `setInterval()`, and `obj.addEven
 as errors within those calls cannot be properly assigned to the userscript without manually
 calling `safeWrapCall()`.
 
+Usage of `innerHTML`, `outerHTML`, `insertAdjacentHTML()`, etc. is not permitted as it opens
+the script up to XSS attacks and requires bypassing the trusted types policy of YouTube.
+Please use `$builder()` and `$populate` to dynamically create elements when necessary.
+
 Below is a quick cheat sheet for how to use the _safe_ functions:
 
 ### setTimeout()
@@ -56,4 +60,29 @@ element.addEventListener('click', () => {
 safeEventListener(element, 'click', () => {
     // ...
 });
+```
+
+### $builder() and $populate()
+
+More wordy, but also more secure.
+
+```js
+container.insertAdjacentHTML('beforeend', `
+    <div class="foo bar">
+        Some text: Test
+        some value: ${value} <- this is bad
+    </div>
+`);
+```
+
+```js
+container.insertAdjacentElement('beforeend', $populate(
+    () => $builder('div')
+        .className('foo bar')
+        .build(),
+    element => element.textContent = `
+        Some text: Test
+        some value: ${value} <- this is secure!
+    `.trim(),
+);
 ```

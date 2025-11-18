@@ -2,6 +2,7 @@
 
 ## development
 
+More stability and cleaner code. A maintenance release without feature changes.
 Added automated validation of userscript with [eslint](https://github.com/eslint/eslint) and [semgrep](https://github.com/semgrep/semgrep).
 
 * Applied eslint recommendations.
@@ -9,6 +10,7 @@ Added automated validation of userscript with [eslint](https://github.com/eslint
 * Added more steps to manual testing script (`test.user.js`).
 * Ensure playlist emulation only runs when a playlist is part of the URL.
 * Ensure every error within the script is handled properly.
+* Remove the need for trusted type bypass by using `$builder()` amd `$populate()` (formerly `safeBuildDynamicHtml`) for all dynamic HTML.
 
 `eslint` and `semgrep` are used to check for risky/insecure code inside the userscript.
 This is a measure to build reliability and trust by making it easier to audit the code.

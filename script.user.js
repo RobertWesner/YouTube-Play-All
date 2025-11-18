@@ -84,7 +84,7 @@
     }
 
     /**
-     * Static checkers dislike insertAdjacentHtml(), so we take extra steps,
+     * insertAdjacentHtml() can open the door to XSS, so we take extra steps,
      * even if the original values are already safe.
      *
      * @param {() => HTMLElement} createElement
@@ -92,7 +92,7 @@
      * @param {(element: HTMLElement) => void} postprocess
      * @return HTMLElement
      */
-    const safeBuildDynamicHtml = (createElement, insert = () => {}, postprocess = () => {}) => {
+    const $populate = (createElement, insert = () => {}, postprocess = () => {}) => {
         const element = createElement();
         insert(element);
         postprocess(element);
@@ -103,11 +103,13 @@
     /**
      * @return WrappedElementBuilder
      */
-    const buildElement = element => {
+    const $builder = tag => {
+        /** @var {any|HTMLElement} */
+        const element = document.createElement(tag);
         /** @var {WrappedElementBuilder} */
         const proxy = new Proxy(element, {
             get(target, prop, _) {
-                if (prop === 'unwrap') {
+                if (prop === 'build') {
                     return () => element;
                 }
 
@@ -128,16 +130,16 @@
         return proxy;
     };
 
-    const safeInjectStyle = (id, style) => document.head.insertAdjacentElement('beforeend', safeBuildDynamicHtml(
-        () => buildElement(document.createElement('style'))
+    const $style = (id, style) => document.head.insertAdjacentElement('beforeend', $populate(
+        () => $builder('style')
             .id(id)
-            .unwrap(),
+            .build(),
         element => element.textContent = style,
     ));
 
-    safeInjectStyle('ytpa-height', '');
+    $style('ytpa-height', '');
     // language=css
-    safeInjectStyle('ytpa-style', `
+    $style('ytpa-style', `
         .ytpa-btn {
             border-radius: 8px;
             font-family: 'Roboto', 'Arial', sans-serif;
@@ -489,7 +491,7 @@
         // #5: add a custom container for buttons if Latest/Popular/Oldest is missing
         if (parent === null) {
             const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer');
-            grid.insertAdjacentElement('afterbegin', buildElement(document.createElement('div')).className('ytpa-button-container').unwrap());
+            grid.insertAdjacentElement('afterbegin', $builder('div').className('ytpa-button-container').build());
             parent = grid.querySelector('.ytpa-button-container');
         }
 
@@ -509,38 +511,38 @@
         if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('a'))
+                $populate(
+                    () => $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
                         .role('button')
-                        .unwrap(),
+                        .build(),
                     element => element.textContent = 'Play Popular',
                 ),
             );
         } else if (parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('a'))
+                $populate(
+                    () => $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
                         .role('button')
-                        .unwrap(),
+                        .build(),
                     element => element.textContent = 'Play All',
                 ),
             );
         } else {
             parent.insertAdjacentElement(
                 'beforeend',
-                safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('a'))
+                $populate(
+                    () => $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn ytpa-unsupported')
                         .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
                         .role('button')
                         .target('_blank')
                         .rel('noreferrer')
-                        .unwrap(),
+                        .build(),
                     element => element.textContent = 'No Playlist Found',
                 ),
             );
@@ -557,36 +559,36 @@
             // Only allow random play in desktop version for now
             parent.insertAdjacentElement(
                 'beforeend',
-                safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('span'))
+                $populate(
+                    () => $builder('span')
                         .className('ytpa-btn ytpa-random-btn ytpa-btn-sections')
-                        .unwrap(),
+                        .build(),
                     element => element.append(
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('a'))
+                        $populate(
+                            () => $builder('a')
                                 .className('ytpa-btn-section')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
                                 .role('button')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = 'Play Random',
                         ),
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('span'))
+                        $populate(
+                            () => $builder('span')
                                 .className('ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover')
                                 .role('button')
                                 .tabindex('0')
                                 .aria_label('More options for random play')
                                 .aria_haspopup('menu')
                                 .aria_expanded('false')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = '▾',
                         ),
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('span'))
+                        $populate(
+                            () => $builder('span')
                                 .className('ytpa-random-btn-tab-fix')
                                 .tabindex('-1')
                                 .aria_hidden('true')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = '▾',
                         ),
                     ),
@@ -595,28 +597,28 @@
 
             document.body.insertAdjacentElement(
                 'afterbegin',
-                safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('div'))
+                $populate(
+                    () => $builder('div')
                         .className('ytpa-random-popover')
                         .role('menu')
                         .aria_label('Random play options')
                         .hidden('')
-                        .unwrap(),
+                        .build(),
                     element => element.append(
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('a'))
+                        $populate(
+                            () => $builder('a')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest`)
                                 .aria_label('Play Random prefer newest')
                                 .role('menuitem')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = 'Prefer newest',
                         ),
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('a'))
+                        $populate(
+                            () => $builder('a')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1`)
                                 .aria_label('Play Random prefer oldest')
                                 .role('menuitem')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = 'Prefer oldest',
                         ),
                     ),
@@ -815,33 +817,33 @@
             }
 
             document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist')
-                .insertAdjacentElement('afterend', safeBuildDynamicHtml(
-                    () => buildElement(document.createElement('div'))
+                .insertAdjacentElement('afterend', $populate(
+                    () => $builder('div')
                         .className('ytpa-playlist-emulator')
                         .data_list(list)
-                        .unwrap(),
+                        .build(),
                     element => element.append(
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('div'))
+                        $populate(
+                            () => $builder('div')
                                 .className('title')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = 'Playlist emulator',
                         ),
-                        safeBuildDynamicHtml(
-                            () => buildElement(document.createElement('div'))
+                        $populate(
+                            () => $builder('div')
                                 .className('information')
-                                .unwrap(),
+                                .build(),
                             element => element.textContent = `
                             It looks like YouTube is unable to handle this large playlist.
                             Playlist emulation is a limited fallback feature of YTPA to enable you to watch even more content.
                         `.trim(),
                         ),
-                        buildElement(document.createElement('div'))
+                        $builder('div')
                             .className('items')
-                            .unwrap(),
-                        buildElement(document.createElement('footer'))
+                            .build(),
+                        $builder('footer')
                             .className('footer')
-                            .unwrap(),
+                            .build(),
                     )
                 ));
 
@@ -1021,13 +1023,13 @@
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
-            playlistContainer.insertAdjacentElement('afterbegin', safeBuildDynamicHtml(
-                () => buildElement(document.createElement('div')).className('ytpa-random-notice').unwrap(),
+            playlistContainer.insertAdjacentElement('afterbegin', $populate(
+                () => $builder('div').className('ytpa-random-notice').build(),
                 element => element.append(
                     document.createTextNode('This playlist is using random play.'),
                     document.createElement('br'),
                     document.createTextNode('The videos will '),
-                    safeBuildDynamicHtml(
+                    $populate(
                         () => document.createElement('strong'),
                         element => element.textContent = 'not be played in the order',
                     ),
@@ -1145,7 +1147,7 @@
  */
 /**
  * @typedef {Object} WrappedElementBuilder
- * @property {() => HTMLElement} unwrap
+ * @property {() => HTMLElement} build
  * @property {(string) => WrappedElementBuilder} id
  * @property {(string) => WrappedElementBuilder} className
  * @property {(string) => WrappedElementBuilder} href
