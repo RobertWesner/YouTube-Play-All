@@ -1,32 +1,46 @@
+# Note: semgrep on its own does not prove the code to be safe,
+#       as all rules can be bypassed when a malicious attacker desires to do so.
+#       It is meant to enforce cleaner and more readable and code that is easy to reason about.
+
 rules:
-    -   id: js-no-eval-or-new-function
-        message: "Avoid eval / new Function in the userscript."
+    -   id: js-no-eval
+        message: "Do not use eval."
         severity: ERROR
         languages: [ javascript ]
-        patterns:
-            -   pattern: eval(...)
-            -   pattern: new Function(...)
+        pattern: eval(...)
+
+    -   id: js-no-new-function
+        message: "Do not use new Function."
+        severity: ERROR
+        languages: [ javascript ]
+        pattern: new Function(...)
 
     -   id: js-no-document-cookie
-        message: "YTPA should not access document.cookie."
+        message: "Do not access document.cookie."
         severity: ERROR
         languages: [ javascript ]
         pattern: document.cookie
 
     -   id: js-no-sendbeacon
-        message: "navigator.sendBeacon is not allowed in this script."
+        message: "Do not use navigator.sendBeacon."
         severity: ERROR
         languages: [ javascript ]
         pattern: navigator.sendBeacon(...)
 
     -   id: js-no-websocket
-        message: "WebSockets are not expected in this userscript. Review necessity."
+        message: "Do not use WebSockets."
         severity: ERROR
         languages: [ javascript ]
         pattern: new WebSocket(...)
 
+    -   id: js-no-cross-window-postmessage
+        message: "Do not use window.postMessage."
+        severity: ERROR
+        languages: [ javascript ]
+        pattern: window.postMessage(...)
+
     -   id: js-fetch-non-whitelisted-domain
-        message: "fetch() URL should be YouTube only. Review this call."
+        message: "fetch() URL should be YouTube only."
         severity: ERROR
         languages: [ javascript ]
         patterns:
@@ -34,41 +48,35 @@ rules:
             -   metavariable-regex:
                     metavariable: $URL
                     regex: ()['"`](?!.*youtube\.com).*['"` ]()
-
-    -   id: js-no-cross-window-postmessage
-        message: "window.postMessage is not expected in this userscript. Review necessity."
-        severity: ERROR
-        languages: [ javascript ]
-        pattern: $OBJ.postMessage(...)
-        metavariables:
-            OBJ: window
-
     -   id: js-no-location-rewrite-to-non-youtube
-        message: "Changing window.location to non-YouTube domains is suspicious. Review."
+        message: "Do not change window.location to non-YouTube domains."
         severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.location = $URL
+            -   pattern: location = $URL
             -   metavariable-regex:
                     metavariable: $URL
                     regex: ()['"`](?!.*youtube\.com).*['"` ]()
 
     -   id: js-no-location-href-rewrite-to-non-youtube
-        message: "Changing window.location to non-YouTube domains is suspicious. Review."
+        message: "Do not change window.location.href to non-YouTube domains."
         severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.location.href = $URL
+            -   pattern: location.href = $URL
             -   metavariable-regex:
                     metavariable: $URL
                     regex: ()['"`](?!.*youtube\.com).*['"` ]()
 
     -   id: js-no-open-non-youtube
-        message: "window.open to non-YouTube domains should be reviewed."
+        message: "Do not use window.open to non-YouTube domains."
         severity: ERROR
         languages: [ javascript ]
         patterns:
             -   pattern: window.open($URL, ...)
+            -   pattern: open($URL, ...)
             -   metavariable-regex:
                     metavariable: $URL
                     regex: ()['"`](?!.*youtube\.com).*['"` ]()
