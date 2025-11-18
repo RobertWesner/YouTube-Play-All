@@ -14,14 +14,14 @@ echo -e "\e[0;36mSetting up..."
 echo -e "\e[0;36mRunning eslint..."
 (
     cd linting
-    npm run lint -- --output-file results/eslint.out || echo "error" > results/eslint.out
+    npm run lint -- --output-file results/eslint.out || echo "error" >> results/eslint.out
 )  > /dev/null 2>&1
 
 echo -e "\e[0;36mRunning semgrep..."
 (
     cd linting
     source .venv/bin/activate
-    semgrep -c ../.semgrep.yml ../script.user.js --output results/semgrep.out || echo "error" > results/semgrep.out
+    semgrep -c ../.semgrep.yml ../script.user.js --output results/semgrep.out || echo "error" >> results/semgrep.out
     deactivate
 )  > /dev/null 2>&1
 
