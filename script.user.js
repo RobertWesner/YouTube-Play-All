@@ -671,13 +671,28 @@
         await refreshId();
 
         // Regenerate button if switched between Latest and Popular
-        const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer, ytm-feed-filter-chip-bar-renderer .iron-selected, ytm-feed-filter-chip-bar-renderer .chip-bar-contents .selected');
-        if (element) {
-            observer.observe(element, {
-                attributes: true,
-                childList: false,
-                subtree: false,
-            });
+        if (location.host === 'm.youtube.com') {
+            // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
+            Array.from(document.querySelectorAll('ytm-feed-filter-chip-bar-renderer ytm-chip-cloud-chip-renderer'))
+                .filter(element => !element.hasAttribute('data-ytpa-click-listener-attached'))
+                .forEach(
+                    element => {
+                        element.setAttribute('data-ytpa-click-listener-attached', '');
+                        element.addEventListener('click', () => {
+                            removeButton();
+                            apply();
+                        });
+                    },
+                );
+        } else {
+            const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer');
+            if (element) {
+                observer.observe(element, {
+                    attributes: true,
+                    childList: false,
+                    subtree: false,
+                });
+            }
         }
 
         // This check is necessary for the mobile Interval
