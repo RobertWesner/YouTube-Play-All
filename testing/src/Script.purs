@@ -4,7 +4,7 @@ import Prelude
 import Toppokki as T
 import Effect.Aff (Aff, delay)
 import Info (info)
-import Helpers (setUpUserscript, waitForAndClick, ytpaSelector)
+import Helpers (setUpUserscript, waitForAndClick, waitForClearScreen, ytpaSelector)
 import Data.Time.Duration (Milliseconds(Milliseconds))
 import Foreign (isNull, isUndefined, readString)
 import Control.Monad.Except (runExcept)
@@ -102,10 +102,7 @@ script = do
         )
         >>= step "reload-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
-                delay (Milliseconds 500.0)
+                waitForClearScreen page'
                 T.goto (T.URL "https://www.youtube.com/@TechnologyConnections/videos") page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
@@ -169,10 +166,7 @@ script = do
         )
         >>= step "live-latest" "https://www.youtube.com/playlist?list=UULV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
             \page' -> do
-                _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
-                delay (Milliseconds 500.0)
+                waitForClearScreen page'
                 T.goto (T.URL "https://www.youtube.com/@Insym/streams") page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'

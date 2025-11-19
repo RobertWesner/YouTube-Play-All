@@ -2,9 +2,10 @@ module Helpers where
 
 import Prelude
 import Toppokki as T
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, delay)
 import Node.FS.Aff (readTextFile)
 import Node.Encoding (Encoding(UTF8))
+import Data.Time.Duration (Milliseconds(Milliseconds))
 
 setUpJS :: String -> T.Page -> Aff Unit
 setUpJS script page =
@@ -20,6 +21,13 @@ waitForAndClick :: String -> T.Page -> Aff Unit
 waitForAndClick selector page = do
     _ <- T.pageWaitForSelector (T.Selector selector) {} page
     T.click (T.Selector selector) page
+
+waitForClearScreen :: T.Page -> Aff Unit
+waitForClearScreen page = do
+    _ <- T.unsafeEvaluateStringFunction ("document.head.remove();const lock=document.createElement('div');lock.id='lock';lock.textContent='Waiting';document.body.textContent='';document.body.append(lock);") page
+    delay (Milliseconds 500.0)
+    _ <- T.pageWaitForSelector (T.Selector "#lock") {} page
+    delay (Milliseconds 500.0)
 
 ytpaSelector :: String
 ytpaSelector = ".ytpa-btn.ytpa-play-all-btn"
