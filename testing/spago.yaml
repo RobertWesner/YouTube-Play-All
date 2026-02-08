@@ -4,10 +4,11 @@ package:
     - aff
     - console
     - effect
+    - node-fs
+    - node-process
     - prelude
     - strings
     - toppokki
-    - node-fs
   test:
     main: Test.Main
     dependencies: []

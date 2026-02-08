@@ -19,7 +19,7 @@ RUN groupadd -r appuser && \
 
 USER appuser
 
-RUN npm i
+RUN npm ci
 
 COPY script.user.js /
 COPY testing .

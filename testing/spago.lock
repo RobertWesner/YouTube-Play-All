@@ -9,6 +9,7 @@
             "console",
             "effect",
             "node-fs",
+            "node-process",
             "prelude",
             "strings",
             "toppokki"
@@ -55,6 +56,7 @@
             "node-http",
             "node-net",
             "node-path",
+            "node-process",
             "node-streams",
             "node-tls",
             "node-url",
@@ -67,6 +69,7 @@
             "orders",
             "parallel",
             "partial",
+            "posix-types",
             "prelude",
             "profunctor",
             "quickcheck",
@@ -1233,6 +1236,22 @@
         "effect"
       ]
     },
+    "node-process": {
+      "type": "registry",
+      "version": "11.2.0",
+      "integrity": "sha256-+2MQDYChjGbVbapCyJtuWYwD41jk+BntF/kcOTKBMVs=",
+      "dependencies": [
+        "effect",
+        "foreign",
+        "foreign-object",
+        "maybe",
+        "node-event-emitter",
+        "node-streams",
+        "posix-types",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
     "node-streams": {
       "type": "registry",
       "version": "9.0.1",
@@ -1389,6 +1408,15 @@
       "version": "4.0.0",
       "integrity": "sha256-fwXerld6Xw1VkReh8yeQsdtLVrjfGiVuC5bA1Wyo/J4=",
       "dependencies": []
+    },
+    "posix-types": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-ZfFz8RR1lee/o/Prccyeut3Q+9tYd08mlR72sIh6GzA=",
+      "dependencies": [
+        "maybe",
+        "prelude"
+      ]
     },
     "prelude": {
       "type": "registry",

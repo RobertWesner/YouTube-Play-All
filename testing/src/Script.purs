@@ -4,11 +4,14 @@ import Prelude
 import Toppokki as T
 import Effect.Aff (Aff, delay)
 import Info (info)
-import Helpers (injectUserscript, waitForAndClick, ytpaSelector)
+import Helpers (setUpUserscript, waitForAndClick, waitForClearScreen, ytpaSelector)
 import Data.Time.Duration (Milliseconds(Milliseconds))
 import Foreign (isNull, isUndefined, readString)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
+import Effect.Class (liftEffect)
+import Node.Process (exit') as Process
+import Control.Monad.Error.Class (catchError)
 
 step :: String -> String -> T.Page -> (T.Page -> Aff Unit) -> Boolean -> Aff Boolean
 step label expected page setup prev = do
@@ -38,19 +41,23 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox"] }
+    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ] }
     page <- T.newPage browser
 
+    setUpUserscript page
     T.goto (T.URL "https://youtube.com") page
 
-    info "Waiting to reject cookies..."
-    waitForAndClick "button[aria-label*=\"Reject the use of cookies\"]" page
+    catchError (do
+        info "Waiting to reject cookies..."
+        waitForAndClick "button[aria-label*=\"Reject the use of cookies\"]" page
+    ) (\_ -> do
+        info "Skipping the wait and attempting to continue..."
+        pure unit
+    )
 
     info "Waiting for refresh to finish..."
     delay (Milliseconds 500.0)
-    _ <- T.pageWaitForSelector (T.Selector "[aria-label*=\"Your YouTube history is off\"]") {} page
-    delay (Milliseconds 1000.0)
-    injectUserscript page
+    _ <- T.pageWaitForSelector (T.Selector "[aria-label*=\"Your YouTube history is off\"],[aria-label=\"Try searching to get started\"]") {} page
     delay (Milliseconds 1000.0)
 
     -- Actual testing
@@ -65,42 +72,39 @@ script = do
                 let channelLinkSelector = ".channel-link[href=\"/@TechnologyConnections\"]"
                 _ <- T.pageWaitForSelector (T.Selector channelLinkSelector) {} page'
                 T.click (T.Selector channelLinkSelector) page'
+                delay (Milliseconds 500.0)
                 waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-latest-2" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-popular-2" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-latest-3" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-popular-3" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "reload-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
-                delay (Milliseconds 500.0)
+                waitForClearScreen page'
                 T.goto (T.URL "https://www.youtube.com/@TechnologyConnections/videos") page'
-                injectUserscript page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page'
                 delay (Milliseconds 500.0)
@@ -111,7 +115,7 @@ script = do
         )
         >>= step "reload-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "shorts-latest" "https://www.youtube.com/playlist?list=UUSHXnNibvR_YIdyPs8PZIBoEw&playnext=1" page (
@@ -128,7 +132,7 @@ script = do
         )
         >>= step "shorts-popular" "https://www.youtube.com/playlist?list=UUPSXnNibvR_YIdyPs8PZIBoEw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "mythbusters-fallback-videos-latest" "https://www.youtube.com/playlist?list=UULFhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
@@ -148,7 +152,7 @@ script = do
         )
         >>= step "mythbusters-fallback-videos-popular" "https://www.youtube.com/playlist?list=UULPhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "mythbusters-fallback-shorts-latest" "https://www.youtube.com/playlist?list=UUSHhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
@@ -158,17 +162,13 @@ script = do
         )
         >>= step "mythbusters-fallback-shorts-popular" "https://www.youtube.com/playlist?list=UUPShUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "live-latest" "https://www.youtube.com/playlist?list=UULV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
             \page' -> do
-                _ <- T.unsafeEvaluateStringFunction ("document.head.remove();document.body.innerHTML = '<div id=\"lock\">WAITING</div>';") page'
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "#lock") {} page'
-                delay (Milliseconds 500.0)
+                waitForClearScreen page'
                 T.goto (T.URL "https://www.youtube.com/@Insym/streams") page'
-                injectUserscript page'
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page'
                 delay (Milliseconds 500.0)
@@ -179,14 +179,16 @@ script = do
         )
         >>= step "live-popular" "https://www.youtube.com/playlist?list=UUPV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
-
-    if result == true
-        then info "ALL TESTS PASSED!"
-        else info "UNFORTUNATE FAILURE..."
 
     -- Shutdown
 
     T.close browser
+
+    if result == true
+        then  info "ALL TESTS PASSED!"
+        else do
+            info "UNFORTUNATE FAILURE..."
+            liftEffect $ Process.exit' 1

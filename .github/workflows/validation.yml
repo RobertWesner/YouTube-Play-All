@@ -1,0 +1,46 @@
+name: Validation
+on:
+    pull_request:
+    push:
+        branches: [ development, main ]
+
+jobs:
+    verify:
+        runs-on: ubuntu-22.04
+
+        steps:
+            -   name: Checkout repo
+                uses: actions/checkout@v4
+
+            -   name: Setup Node
+                uses: actions/setup-node@v4
+                with:
+                    node-version: '25'
+
+            -   name: Setup Python
+                uses: actions/setup-python@v5
+                with:
+                    python-version: '3.12'
+
+            -   name: Install ESLint deps
+                working-directory: ./linting
+                run: npm ci
+
+            -   name: Create Python venv and install Semgrep
+                working-directory: ./linting
+                run: |
+                    python -m venv .venv
+                    . .venv/bin/activate
+                    pip install --upgrade pip
+                    pip install semgrep
+
+            -   name: Run ESLint
+                working-directory: ./linting
+                run: |
+                    npx eslint ../script.user.js
+
+            -   name: Run Semgrep
+                working-directory: ./linting
+                run: |
+                    . .venv/bin/activate
+                    semgrep -c ../.semgrep.yml ../script.user.js

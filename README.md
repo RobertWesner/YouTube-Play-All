@@ -1,15 +1,24 @@
 <div align="center">
-    <h1>YouTube Play All</h1>
-    <a href="#installation">Installation</a> |
-    <a href="#usage">Usage</a> |
-    <a href="#issues">Issues</a> |
-    <a href="#license">License</a>
-    <p>
-        <strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
-    </p>
-    <a href="https://forms.gle/UV9icRvkkaxs1Jnn6" aria-label="provide feedback" role="button">
-        <img src="./readme/button_feedback.png" tabindex="-1" height="32">
-    </a>
+<h1>YTPA - Play All For YouTube</h1>
+<div>
+
+[![tests](https://github.com/RobertWesner/YouTube-Play-All/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/RobertWesner/YouTube-Play-All/actions/workflows/tests.yml)
+[![validation](https://github.com/RobertWesner/YouTube-Play-All/actions/workflows/validation.yml/badge.svg?branch=main)](https://github.com/RobertWesner/YouTube-Play-All/actions/workflows/validation.yml)
+![GitHub created_at](https://img.shields.io/github/created-at/RobertWesner/YouTube-Play-All)
+![Last commit](https://img.shields.io/github/last-commit/RobertWesner/YouTube-Play-All?label=last%20update)
+
+</div>
+<a href="#installation">Installation</a> |
+<a href="#usage">Usage</a> |
+<a href="#issues">Issues</a> |
+<a href="#license">License</a> |
+<a href="./PRIVACY.md">Privacy</a>
+<p>
+<strong>YTPA</strong>: A sophisticated userscript adding the Play-All button back to YouTube.
+</p>
+<a href="https://forms.gle/UV9icRvkkaxs1Jnn6" aria-label="provide feedback" role="button">
+<img src="./readme/button_feedback.png" tabindex="-1" height="32">
+</a>
 </div>
 
 ---
@@ -25,6 +34,8 @@ I got frustrated from not being able to binge-watch some YouTube channels. Unabl
 Also **works with YouTube Shorts** and supports the **mobile browser** version of YouTube.
 
 Now with support for **Random Play**!
+
+This project is actively maintained with automated tests and validation to keep it stable as YouTube evolves.
 
 ## Installation
 
@@ -101,9 +112,11 @@ If your current installation does not work, please update it by following the in
 
 ## Contributing and Testing
 
+Contributions are welcome and will be automatically tested by GitHub workflows.
+
 ### Basic Tests (easy)
 
-Please use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
+Feel free to use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
 
 1. Install the testing script.
 2. Open your developer tools.
@@ -112,7 +125,7 @@ Please use [the testing userscript](https://github.com/RobertWesner/YouTube-Play
 
 ### In-Depth Tests (recommended)
 
-### Inside A Container
+#### Inside A Container
 
 Either use Docker:
 
@@ -128,7 +141,7 @@ podman run --rm -it "$(podman build -q -f Containerfile .)"
 
 Or your other docker-compatible container environment of choice.
 
-### Running Tests Outside Of Containers
+#### Running Tests Outside Of Containers
 
 To run the automated tests directly, you will need the following tools:
 
@@ -137,12 +150,9 @@ To run the automated tests directly, you will need the following tools:
 - Purescript purs `0.15.15`
 
 ```bash
-(
-   cd testing
-   npm i
-   spago run -q
-)
+(cd testing && npm i && spago run -q)
 ```
+
 
 ## License
 

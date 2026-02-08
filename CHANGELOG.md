@@ -1,5 +1,24 @@
 # YTPA Changelog
 
+## 20260208-0
+
+More stability and cleaner code. A maintenance release without feature changes.
+Added automated validation of userscript with [eslint](https://github.com/eslint/eslint) and [semgrep](https://github.com/semgrep/semgrep).
+
+* Applied eslint recommendations.
+* Improved reliability of automated testing.
+* Added more steps to manual testing script (`test.user.js`).
+* Ensure playlist emulation only runs when a playlist is part of the URL.
+* Ensure every error within the script is handled properly.
+* Remove the need for trusted type bypass by using `$builder()` amd `$populate()` (formerly `safeBuildDynamicHtml`) for all dynamic HTML.
+* Increase mobile reliability for switching between Latest and Popular.
+* [#51](https://github.com/RobertWesner/YouTube-Play-All/issues/51) [#53](https://github.com/RobertWesner/YouTube-Play-All/issues/53) Improved the regular expression for extracting channelId.
+* Compatibility with partially released new YouTube UI elements.
+
+`eslint` and `semgrep` are used to check for risky/insecure code inside the userscript.
+This is a measure to build reliability and trust by making it easier to audit the code.
+
+
 ## 20251115-1
 
 Slight improvements to stability in edge cases.
@@ -11,6 +30,7 @@ Strong work towards automatic testing. Commands are used to trigger tests.
 * Made fetching of channelId more reliable when starting at a channel page and navigating to another.
 
 There are now automated testing tools for YTPA, written in [purescript](https://www.purescript.org/) and running [puppeteer](https://pptr.dev/).
+
 
 ## 20251115-0
 
@@ -33,11 +53,13 @@ Verified working features:
   * Clicking "Next" button preserving random play
 * Playlist emulation
 
+
 ## 20251114-0
 
 Fixed a small but old bug that lead to failed channelId extraction on a small set of channels.
 
 * [#9](https://github.com/RobertWesner/YouTube-Play-All/issues/9) Improved reliability of channelId extraction.
+
 
 ## 20251113-0
 
@@ -47,6 +69,7 @@ Added support for `#below` (previously used `#secondary`).
 * [#42](https://github.com/RobertWesner/YouTube-Play-All/issues/42) Made button sizes more consistent. 
 * [#43](https://github.com/RobertWesner/YouTube-Play-All/issues/43) Fixed incorrect and duplicated buttons when chip bar is missing.
 * [#41](https://github.com/RobertWesner/YouTube-Play-All/issues/41) Added random play compatibility for new /watch layout. 
+
 
 ## Previous versions
 
