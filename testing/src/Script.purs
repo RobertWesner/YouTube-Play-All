@@ -41,7 +41,7 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ] }
+    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ], headless: false }
     page <- T.newPage browser
 
     setUpUserscript page
@@ -72,34 +72,33 @@ script = do
                 let channelLinkSelector = ".channel-link[href=\"/@TechnologyConnections\"]"
                 _ <- T.pageWaitForSelector (T.Selector channelLinkSelector) {} page'
                 T.click (T.Selector channelLinkSelector) page'
-                -- these rather long waits seem to be necessary for stability as YouTube gets confused with too fast navigation
-                delay (Milliseconds 2000.0)
+                delay (Milliseconds 500.0)
                 waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page'
-                delay (Milliseconds 2000.0)
+                delay (Milliseconds 500.0)
         )
         >>= step "videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-latest-2" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-popular-2" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-latest-3" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "videos-popular-3" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "reload-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
@@ -116,7 +115,7 @@ script = do
         )
         >>= step "reload-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "shorts-latest" "https://www.youtube.com/playlist?list=UUSHXnNibvR_YIdyPs8PZIBoEw&playnext=1" page (
@@ -133,7 +132,7 @@ script = do
         )
         >>= step "shorts-popular" "https://www.youtube.com/playlist?list=UUPSXnNibvR_YIdyPs8PZIBoEw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "mythbusters-fallback-videos-latest" "https://www.youtube.com/playlist?list=UULFhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
@@ -153,7 +152,7 @@ script = do
         )
         >>= step "mythbusters-fallback-videos-popular" "https://www.youtube.com/playlist?list=UULPhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "mythbusters-fallback-shorts-latest" "https://www.youtube.com/playlist?list=UUSHhUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
@@ -163,7 +162,7 @@ script = do
         )
         >>= step "mythbusters-fallback-shorts-popular" "https://www.youtube.com/playlist?list=UUPShUAaNhjdc1aN5f_29BPrhw&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
         >>= step "live-latest" "https://www.youtube.com/playlist?list=UULV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
@@ -180,7 +179,7 @@ script = do
         )
         >>= step "live-popular" "https://www.youtube.com/playlist?list=UUPV5uNya42ayhsRnZOR3mO6NA&playnext=1" page (
             \page' -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2)" page'
+                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page'
                 delay (Milliseconds 500.0)
         )
 

@@ -13,6 +13,7 @@ Added automated validation of userscript with [eslint](https://github.com/eslint
 * Remove the need for trusted type bypass by using `$builder()` amd `$populate()` (formerly `safeBuildDynamicHtml`) for all dynamic HTML.
 * Increase mobile reliability for switching between Latest and Popular.
 * [#51](https://github.com/RobertWesner/YouTube-Play-All/issues/51) [#53](https://github.com/RobertWesner/YouTube-Play-All/issues/53) Improved the regular expression for extracting channelId.
+* Compatibility with partially released new YouTube UI elements.
 
 `eslint` and `semgrep` are used to check for risky/insecure code inside the userscript.
 This is a measure to build reliability and trust by making it easier to audit the code.

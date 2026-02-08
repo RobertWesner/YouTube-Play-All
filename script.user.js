@@ -472,10 +472,17 @@
         id = channelId.substring(2);
     };
 
+    // 20260802-0 Fixes new YouTube UI not keeping the selected state
+    let currentSelection = null;
+
     const apply = () => {
-        document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${
-            document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer')?.offsetHeight ?? 32
-        }px; }`;
+        const container = document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer, chip-bar-view-model.ytChipBarViewModelHost');
+        let height = 32;
+        if (container !== null) {
+            const computedStyle = getComputedStyle(container);
+            height = container.offsetHeight - parseFloat(computedStyle.paddingTop);
+        }
+        document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${height}px; }`;
 
         if (id === '') {
             // do not apply prematurely, caused by mutation observer
@@ -486,11 +493,21 @@
             // mobile view
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
-            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips');
+            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, chip-bar-view-model.ytChipBarViewModelHost');
+
+        if (parent !== null && parent.tagName.toLowerCase() === 'chip-bar-view-model') {
+            if (currentSelection === null) {
+                currentSelection = 1;
+            }
+
+            parent.querySelectorAll('div.ytChipBarViewModelChipWrapper')
+                .forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1));
+            // parent = document.querySelector('#header.ytd-rich-grid-renderer');
+        }
 
         // #5: add a custom container for buttons if Latest/Popular/Oldest is missing
         if (parent === null) {
-            const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer');
+            const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer, div.ytChipBarViewModelChipWrapper');
             grid.insertAdjacentElement('afterbegin', $builder('div').className('ytpa-button-container').build());
             parent = grid.querySelector('.ytpa-button-container');
         }
@@ -508,7 +525,7 @@
                 : ['UULV', 'UUPV'];
 
         // Check if popular videos are displayed
-        if (parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected') || parent.classList.contains('ytpa-button-container')) {
+        if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
@@ -520,7 +537,7 @@
                     element => element.textContent = 'Play Popular',
                 ),
             );
-        } else if (parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected')) {
+        } else if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
@@ -669,6 +686,8 @@
 
         // This needs to be this early in the process as otherwise it may use old ids from other channels
         await refreshId();
+
+        currentSelection = null;
 
         // Regenerate button if switched between Latest and Popular
         if (location.host === 'm.youtube.com') {
