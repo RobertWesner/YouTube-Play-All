@@ -41,7 +41,7 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ], headless: false }
+    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ] }
     page <- T.newPage browser
 
     setUpUserscript page
