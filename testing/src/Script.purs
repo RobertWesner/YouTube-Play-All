@@ -41,7 +41,7 @@ script :: Aff Unit
 script = do
     -- Setup
 
-    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox"] }
+    browser <- T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" ] }
     page <- T.newPage browser
 
     setUpUserscript page
@@ -72,8 +72,10 @@ script = do
                 let channelLinkSelector = ".channel-link[href=\"/@TechnologyConnections\"]"
                 _ <- T.pageWaitForSelector (T.Selector channelLinkSelector) {} page'
                 T.click (T.Selector channelLinkSelector) page'
+                -- these rather long waits seem to be necessary for stability as YouTube gets confused with too fast navigation
+                delay (Milliseconds 2000.0)
                 waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page'
-                delay (Milliseconds 500.0)
+                delay (Milliseconds 2000.0)
         )
         >>= step "videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" page (
             \page' -> do

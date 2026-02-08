@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20251115-1
+// @version         20260208-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -425,12 +425,12 @@
     const refreshId = async () => {
         let channelId = '';
 
-        const pass = () => /UC[\w_-]+/.test(channelId);
+        const pass = () => /UC[\w-]+/.test(channelId);
 
         const tryFetch = async () => {
             try {
                 const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
-                channelId = /var ytInitialData.+"channelId":"(UC\w+)"/.exec(html)?.[1] ?? '';
+                channelId = /var ytInitialData.+?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1] ?? '';
             } finally {
                 // pass
             }
