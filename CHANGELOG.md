@@ -1,5 +1,15 @@
 # YTPA Changelog
 
+## development
+
+Strong progress towards improvements for future testing.
+
+[//]: # (TODO: fix https://github.com/RobertWesner/YouTube-Play-All/issues/56)
+
+* Made testing harness more modular.
+* Refactored initial testing to `Run.Test.All` module.
+* Added `Run.Playground.Ui.V20260219` module to testing harness.
+
 ## 20260208-0
 
 More stability and cleaner code. A maintenance release without feature changes.

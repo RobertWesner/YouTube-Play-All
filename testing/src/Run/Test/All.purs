@@ -1,15 +1,26 @@
-module Script where
+module Run.Test.All (main) where
 
 import Prelude
 import Toppokki as T
-import Effect.Aff (Aff, delay)
+import Effect.Aff (Aff, delay, launchAff_)
 import Lib.Info (info)
-import Lib.Helpers (waitForAndClick, waitForClearScreen)
+import Lib.Helpers (simpleVideosTabTypeSelector, waitForAndClick, waitForClearScreen)
 import Data.Time.Duration (Milliseconds(Milliseconds))
 import Effect.Class (liftEffect)
 import Node.Process (exit') as Process
-import Lib.Script (browser, setup, startStep, step)
+import Command.Script (browser, setup)
 import Data.Either (Either(..))
+import Effect (Effect)
+import Command.Step (startStep, step)
+
+-- TODO: perhaps it would be useful to have a --show option for tests to disable headless
+-- would be best if i had a handler moduler for that
+--
+-- argv <- Process.argv
+-- let args = Array.drop 2 argv  -- drop "node" + script path, keep user args
+
+main :: Effect Unit
+main = launchAff_ script
 
 script :: Aff Unit
 script = do
@@ -17,7 +28,6 @@ script = do
     page' <- setup browser'
 
     let step' = step page'
-
     result <- startStep
         >>= step' "videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
@@ -34,27 +44,27 @@ script = do
         )
         >>= step' "videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "videos-latest-2" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page
+                waitForAndClick btnLatestSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "videos-popular-2" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "videos-latest-3" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(1), .ytChipBarViewModelChipWrapper:nth-child(1)" page
+                waitForAndClick btnLatestSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "videos-popular-3" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "reload-videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
@@ -71,7 +81,7 @@ script = do
         )
         >>= step' "reload-videos-popular" "https://www.youtube.com/playlist?list=UULPy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "shorts-latest" "https://www.youtube.com/playlist?list=UUSHXnNibvR_YIdyPs8PZIBoEw&playnext=1" (
@@ -88,7 +98,7 @@ script = do
         )
         >>= step' "shorts-popular" "https://www.youtube.com/playlist?list=UUPSXnNibvR_YIdyPs8PZIBoEw&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "mythbusters-fallback-videos-latest" "https://www.youtube.com/playlist?list=UULFhUAaNhjdc1aN5f_29BPrhw&playnext=1" (
@@ -108,7 +118,7 @@ script = do
         )
         >>= step' "mythbusters-fallback-videos-popular" "https://www.youtube.com/playlist?list=UULPhUAaNhjdc1aN5f_29BPrhw&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "mythbusters-fallback-shorts-latest" "https://www.youtube.com/playlist?list=UUSHhUAaNhjdc1aN5f_29BPrhw&playnext=1" (
@@ -118,7 +128,7 @@ script = do
         )
         >>= step' "mythbusters-fallback-shorts-popular" "https://www.youtube.com/playlist?list=UUPShUAaNhjdc1aN5f_29BPrhw&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
         >>= step' "live-latest" "https://www.youtube.com/playlist?list=UULV5uNya42ayhsRnZOR3mO6NA&playnext=1" (
@@ -135,11 +145,9 @@ script = do
         )
         >>= step' "live-popular" "https://www.youtube.com/playlist?list=UUPV5uNya42ayhsRnZOR3mO6NA&playnext=1" (
             \page -> do
-                waitForAndClick "#primary #chips yt-chip-cloud-chip-renderer:nth-child(2), .ytChipBarViewModelChipWrapper:nth-child(2)" page
+                waitForAndClick btnPopularSelector page
                 delay (Milliseconds 500.0)
         )
-
-    -- Shutdown
 
     T.close browser'
 
@@ -150,3 +158,7 @@ script = do
             liftEffect $ Process.exit' 1
         Right _ -> do
             info "ALL TESTS PASSED!"
+
+    where
+        btnLatestSelector = simpleVideosTabTypeSelector 1
+        btnPopularSelector = simpleVideosTabTypeSelector 2

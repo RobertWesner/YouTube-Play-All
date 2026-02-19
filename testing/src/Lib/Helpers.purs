@@ -31,3 +31,6 @@ waitForClearScreen page = do
 
 ytpaSelector :: String
 ytpaSelector = ".ytpa-btn.ytpa-play-all-btn"
+
+simpleVideosTabTypeSelector :: Int -> String
+simpleVideosTabTypeSelector n = let s = show n in "#primary #chips yt-chip-cloud-chip-renderer:nth-child(" <> s <> ")," <> ".ytChipBarViewModelChipWrapper:nth-child(" <> s <> ")"
