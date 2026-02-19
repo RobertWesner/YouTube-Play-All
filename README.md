@@ -113,7 +113,7 @@ If your current installation does not work, please update it by following the in
 ## Contributing and Testing
 
 Contributions are welcome and will be automatically tested by GitHub workflows.
-
+npm
 ### Basic Tests (easy)
 
 Feel free to use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
@@ -148,6 +148,11 @@ To run the automated tests directly, you will need the following tools:
 - npm `11.6.2`
 - spago `0.93.44` (get the npm install `spago@next` instead of AUR or other repository)
 - Purescript purs `0.15.15`
+
+Install/Update Chrome
+```bash
+(cd testing && npx puppeteer browsers install chrome)
+```
 
 ```bash
 (cd testing && npm i && spago run -q)

@@ -1,4 +1,4 @@
-module Info where
+module Lib.Info where
 
 import Prelude
 import Effect.Class (liftEffect)

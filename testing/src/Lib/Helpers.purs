@@ -1,4 +1,4 @@
-module Helpers where
+module Lib.Helpers where
 
 import Prelude
 import Toppokki as T
