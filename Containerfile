@@ -24,4 +24,6 @@ RUN npm ci
 COPY script.user.js /
 COPY testing .
 
-CMD ["spago", "run", "-q"]
+RUN spago build -q
+
+CMD ["node", "--input-type=module", "-e", "import('/app/output/Run.Test.All/index.js').then(m => m.main())"]

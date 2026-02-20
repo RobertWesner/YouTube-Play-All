@@ -113,7 +113,7 @@ If your current installation does not work, please update it by following the in
 ## Contributing and Testing
 
 Contributions are welcome and will be automatically tested by GitHub workflows.
-
+npm
 ### Basic Tests (easy)
 
 Feel free to use [the testing userscript](https://github.com/RobertWesner/YouTube-Play-All/raw/main/test.user.js) after making a change.
@@ -149,10 +149,33 @@ To run the automated tests directly, you will need the following tools:
 - spago `0.93.44` (get the npm install `spago@next` instead of AUR or other repository)
 - Purescript purs `0.15.15`
 
+Install/Update Chrome
 ```bash
-(cd testing && npm i && spago run -q)
+(cd testing && npm ci && npx puppeteer browsers install chrome)
 ```
 
+```bash
+(cd testing && npm ci && spago run -m Run.Test.All)
+```
+
+#### Playground - Forcing A Specific State
+
+These are useful to get a browser instance with the userscript
+and a specific state of YouTube (like forcing a new UI).
+
+See: [Playground](./testing/src/Run/Playground)
+
+Keep in mind forcing a UI will only work for ones that
+are yet to be deployed fully and asymmetrically released to some users.
+It is **not possible** to force a specific UI that no longer is
+available from YouTube.
+These scripts do not preserve previous UIs,
+the simply restart the browser until it has the new one.
+
+```bash
+# Change the module to your desired playground
+(cd testing && npm ci && spago run -m Run.Playground.Ui.V20260219)
+```
 
 ## License
 

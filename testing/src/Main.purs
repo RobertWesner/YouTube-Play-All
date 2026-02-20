@@ -1,9 +1,8 @@
 module Main where
 
 import Prelude
-import Effect.Aff (launchAff_)
-import Script (script)
 import Effect (Effect)
+import Effect.Console (log)
 
 main :: Effect Unit
-main = launchAff_ script
+main = log "Check $PROJECT_ROOT$/README.md for usage!"
