@@ -14,7 +14,7 @@ setUpJS script page =
 setUpUserscript :: T.Page -> Aff Unit
 setUpUserscript page = do
     src <- readTextFile UTF8 "../script.user.js"
-    setUpJS "window.GM_info = { script: { version: '21110101-0-test' } };" page
+    setUpJS "window.GM = { info: { script: { version: '21110101-0-test' } } };" page
     setUpJS src page
 
 waitForAndClick :: String -> T.Page -> Aff Unit

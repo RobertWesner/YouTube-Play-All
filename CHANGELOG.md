@@ -1,5 +1,14 @@
 # YTPA Changelog
 
+## development
+
+A lot of housekeeping.
+
+[//]: # (TODO: https://github.com/RobertWesner/YouTube-Play-All/issues/58)
+
+* Refactored [script.user.js](./script.user.js) to have a custom-made single-file module system.
+* Moved most of the boilerplate definitions into individual modules.
+
 ## 20260220-0
 
 Strong progress towards improvements for future testing.

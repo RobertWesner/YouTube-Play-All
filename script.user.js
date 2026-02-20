@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260220-0
+// @version         development
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -37,378 +37,44 @@
 // GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
-(async function __ytpa_root_call__() {
+(async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
 
-    console.info(
-        '%cYTPA - YouTube Play All\n',
-        'color: #bf4bcc; font-size: 32px; font-weight: bold',
-        `You are using version ${GM_info.script.version} of YTPA!`,
-    );
+    // --- setup ---
 
-    const handleError = e => {
-        console.error(
-            '%cYTPA - YouTube Play All\n',
-            'color: #bf4bcc; font-size: 32px; font-weight: bold',
-            e,
-        );
-    };
-    window.addEventListener('unhandledrejection', event => {
-        const e = event.reason || event;
-        const stack = (e && e.stack) || '';
-
-        if (!stack || !stack.includes('__ytpa_root_call__')) {
-            return;
-        }
-
-        handleError(e);
-    });
-    const safeWrapCall = fn => ((...args) => {
-        try {
-            let result = fn(...args);
-            if (result instanceof Promise) {
-                result = result.catch(handleError);
-            }
-
-            return result;
-        } catch (e) {
-            handleError(e);
+    const modules = loadModules();
+    Object.entries(modules).forEach(([name, mod]) => {
+        if (typeof mod === 'function') {
+            // we cant gave compile time errors... because we don't compile
+            console.error(`Tell your local dev he "forgot to call the module constructor for ${name}".\nThis script is probably broken now.`);
         }
     });
-    const safeTimeout = (fn, duration) => setTimeout(safeWrapCall(fn), duration);
-    const safeInterval = (fn, duration) => setInterval(safeWrapCall(fn), duration);
-    const safeEventListener = (node, event, fn) => node.addEventListener(event, safeWrapCall(fn));
 
-    const scriptVersion = GM_info.script.version || null;
+    const {
+        HtmlCreation: { $populate, $builder, $style },
+        Console: console,
+        Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
+        Versioned,
+        Greeter,
+    } = modules;
+    attachSafetyListener();
+
+    console.info(`You are using version ${GM.info.script.version} of YTPA!`);
+    Greeter.greet({
+        time: new Date().toISOString(),
+        version: GM.info.script.version,
+        userAgent: navigator.userAgentData || navigator.userAgent,
+        language: navigator.language,
+    });
+
+    const scriptVersion = GM.info.script.version || null;
     if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
-        console.info(
-            '%cYTPA - YouTube Play All\n',
-            'color: #bf4bcc; font-size: 32px; font-weight: bold',
-            'You are currently running a test version:',
-            scriptVersion,
-        );
+        console.info(`Running debug build version ${GM.info.script.version}, watch out for bugs!`);
     }
 
-    /**
-     * insertAdjacentHtml() can open the door to XSS, so we take extra steps,
-     * even if the original values are already safe.
-     *
-     * @param {() => HTMLElement} createElement
-     * @param {(element: HTMLElement) => void} insert
-     * @param {(element: HTMLElement) => void} postprocess
-     * @return HTMLElement
-     */
-    const $populate = (createElement, insert = () => {}, postprocess = () => {}) => {
-        const element = createElement();
-        insert(element);
-        postprocess(element);
+    loadStyles().forEach(([id, css]) => $style(id, css));
 
-        return element;
-    };
-
-    /**
-     * @return WrappedElementBuilder
-     */
-    const $builder = tag => {
-        /** @var {any|HTMLElement} */
-        const element = document.createElement(tag);
-        /** @var {WrappedElementBuilder} */
-        const proxy = new Proxy(element, {
-            get(target, prop, _) {
-                if (prop === 'build') {
-                    return () => element;
-                }
-
-                const alwaysUseAttributes = ['hidden', 'style'];
-
-                return value => {
-                    if (!alwaysUseAttributes.includes(prop) && prop in element) {
-                        element[prop] = value;
-                    } else {
-                        element.setAttribute(prop.replace('_', '-'), value);
-                    }
-
-                    return proxy;
-                };
-            },
-        });
-
-        return proxy;
-    };
-
-    const $style = (id, style) => document.head.insertAdjacentElement('beforeend', $populate(
-        () => $builder('style')
-            .id(id)
-            .build(),
-        element => element.textContent = style,
-    ));
-
-    $style('ytpa-height', '');
-    // language=css
-    $style('ytpa-style', `
-        .ytpa-btn {
-            border-radius: 8px;
-            font-family: 'Roboto', 'Arial', sans-serif;
-            font-size: 1.4rem;
-            line-height: 2rem;
-            font-weight: 500;
-            margin-left: 0.6em; /* this might be obsolet in new UI, see below */
-            user-select: none;
-            display: inline-flex;
-            flex-direction: column;
-            justify-content: center;
-            vertical-align: top;
-            padding: 0 0.5em;
-            /*noinspection CssUnresolvedCustomProperty*/
-            height: var(--ytpa-height);
-        }
-
-        /* 20260220-0 margin seems unnecessary on new UI */
-        chip-bar-view-model.ytChipBarViewModelHost:has(div.ytChipBarViewModelChipWrapper) .ytChipBarViewModelChipBarScrollContainer + .ytpa-btn {
-            margin-left: 0
-        }
-        
-        .ytpa-btn, .ytpa-btn > * {
-            text-decoration: none;
-            cursor: pointer;
-        }
-        
-        .ytpa-btn-sections {
-            padding: 0;
-            flex-direction: row;
-        }
-        
-        .ytpa-btn-sections > .ytpa-btn-section {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            vertical-align: top;
-            padding: 0 0.5em;
-        }
-
-        .ytpa-btn-sections > .ytpa-btn-section:first-child {
-            border-top-left-radius: 8px;
-            border-bottom-left-radius: 8px;
-        }
-
-        .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
-            border-top-right-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-        
-        /* Colors were updated to meet WCAG AAA (and AA on hover)*/
-
-        .ytpa-play-all-btn {
-            background-color: #890097;
-            color: white;
-        }
-
-        .ytpa-play-all-btn:hover {
-            background-color: #b247cc;
-        }
-        
-        .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > * {
-            background-color: #2053B8;
-            color: white;
-        }
-
-        .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
-            background-color: #2b66da;
-        }
-        
-        .ytpa-play-all-btn.ytpa-unsupported {
-            background-color: #828282;
-            color: white;
-        }
-        
-        .ytpa-random-popover {
-            position: absolute;
-            border-radius: 8px;
-            font-size: 1.6rem;
-            transform: translate(-100%, 0.4em);
-            z-index: 10000;
-        }
-        
-        .ytpa-random-popover > * {
-            display: block;
-            text-decoration: none;
-            padding: 0.4em;
-        }
-        
-        .ytpa-random-popover > :first-child {
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-        
-        .ytpa-random-popover > :last-child {
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-    
-        .ytpa-random-popover > *:not(:last-child) {
-            border-bottom: 1px solid #6e8dbb;
-        }
-    
-        .ytpa-button-container {
-            display: flex;
-            width: 100%;
-            margin-top: 1em;
-            margin-bottom: -1em;
-        }
-
-        ytd-rich-grid-renderer .ytpa-button-container > :first-child {
-            margin-left: 0;
-        }
-        
-        /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
-        .ytpa-play-all-btn ~ .ytpa-play-all-btn,
-        .ytpa-random-btn ~ .ytpa-random-btn {
-            display: none;
-        }
-        
-        /* Fix for mobile view */
-        ytm-feed-filter-chip-bar-renderer .ytpa-btn {
-            margin-right: 12px;
-            padding: 0 0.4em;
-            display: inline-flex !important;
-        }
-        
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
-        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
-            display: none !important;
-        }
-        
-        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
-        #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
-            height: 1em;
-            visibility: hidden;
-        }
-        
-        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
-        #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
-            filter: blur(2em);
-        }
-
-        .ytpa-random-notice {
-            padding: 1em;
-            z-index: 1000;
-        }
-        
-        .ytpa-playlist-emulator {
-            margin-bottom: 1.6rem;
-            border-radius: 1rem;
-        }
-        
-        .ytpa-playlist-emulator > .title {
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
-            font-size: 2rem;
-            background-color: #323232;
-            color: white;
-            padding: 0.8rem;
-        }
-        
-        .ytpa-playlist-emulator > .information {
-            font-size: 1rem;
-            background-color: #2b2a2a;
-            color: white;
-            padding: 0.8rem;
-        }
-        
-        .ytpa-playlist-emulator > .footer {
-            border-bottom-left-radius: 1rem;
-            border-bottom-right-radius: 1rem;
-            background-color: #323232;
-            padding: 0.8rem;
-        }
-        
-        .ytpa-playlist-emulator > .items {
-            max-height: 500px;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-        
-        .ytpa-playlist-emulator:not([data-failed]) > .items:empty::before {
-            content: 'Loading playlist...';
-            background-color: #626262;
-            padding: 0.8rem;
-            color: white;
-            font-size: 2rem;
-            display: block;
-        }
-        
-        .ytpa-playlist-emulator[data-failed="rejected"] > .items:empty::before {
-            content: "Make sure to allow the external API call to ytplaylist.robert.wesner.io to keep viewing playlists that YouTube doesn't natively support!";
-            background-color: #491818;
-            padding: 0.8rem;
-            color: #ff7c7c;
-            font-size: 1rem;
-            display: block;
-        }
-        
-        .ytpa-playlist-emulator > .items > .item {
-            background-color: #2c2c2c;
-            padding: 0.8rem;
-            border: 1px solid #1b1b1b;
-            font-size: 1.6rem;
-            color: white;
-            min-height: 5rem;
-            cursor: pointer;
-        }
-        
-        .ytpa-playlist-emulator > .items > .item:hover {
-            background-color: #505050;
-        }
-        
-        .ytpa-playlist-emulator > .items > .item:not(:last-of-type) {
-            border-bottom: 0;
-        }
-        
-        .ytpa-playlist-emulator > .items > .item[data-current] {
-            background-color: #767676;
-        }
-        
-        body:has(.ytpa-playlist-emulator) .ytp-prev-button.ytp-button,
-        body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
-            display: none !important;
-        }
-        
-        /* hide when sorting by oldest */
-        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
-            display: none;
-        }
-        
-        .ytpa-random-btn-tab-fix {
-            visibility: hidden;
-        }
-        
-        .ytpa-button-container ~ .ytpa-button-container {
-            display: none;
-        }
-        
-        /* [2025-11] Fix for the new UI */
-        .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
-            border-radius: 100px !important;
-            margin-left: 1em !important;
-        }
-    `);
-
-    const waitForElement = async (selector, { root = document } = {}) => new Promise(resolve => {
-        const select = () => root.querySelector(selector), existing = select();
-        if (existing) return resolve(existing);
-
-        const observer = new MutationObserver(() => {
-            const existing = select();
-            if (existing) {
-                observer.disconnect();
-                resolve(existing);
-            }
-        });
-
-        observer.observe(root, { childList: true, subtree: true });
-    });
+    // --- actual code ---
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -421,7 +87,7 @@
 
     const redirect = (v, list, ytpaRandom = null) => {
         if (location.host === 'm.youtube.com') {
-            // TODO: Client side routing on mobile
+            // TODO: Client side routing on mobile? some day...
         } else {
             const redirector = document.createElement('a');
             redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
@@ -528,7 +194,7 @@
             }
 
             // 20260220-0 See #56
-            versioning.v20260220.getTypeButtons().then(
+            Versioned.v20260220.getTypeButtons().then(
                 elements => elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1)),
             );
 
@@ -777,7 +443,7 @@
                     url: 'https://ytplaylist.robert.wesner.io/api/list',
                     data: JSON.stringify({
                         uri: `https://www.youtube.com/playlist?list=${playlist}`,
-                        requestType: `YTPA ${GM_info.script.version}`,
+                        requestType: `YTPA ${GM.info.script.version}`,
                     }),
                     headers: {
                         'Content-Type': 'application/json',
@@ -1207,11 +873,184 @@
 
         safeInterval(applyRandomPlay, 1000);
     })();
+})(() => {
+    // --- Modules, aka. the big refactor, aka. I spent too much time with Purescript ---
 
-    // ---
+    // This might look absolutely insane, and I agree.
+    // But it is the best way to go "enterprise userscript", while keeping it single file.
+    // Let's all admit already, this thing is not your average userscript!
 
-    const versioning = {
-        v20260220: {
+    // The best part? Jetbrains-IDEs are smart enough to resolve all of this.
+
+    const Fmt = (() => {
+        const trimIndent = string => {
+            const lines = string.replace(/^\n/, '').split('\n');
+
+            const indent= Math.min(
+                ...lines
+                    .filter(line => line.trim())
+                    .map(line => line.match(/^(\s*)/)[1].length),
+            );
+
+            return lines.map(line => line.slice(indent)).join('\n');
+        };
+
+        return { trimIndent };
+    })();
+
+    const HtmlCreation = (() => {
+        /**
+         * @return WrappedElementBuilder
+         */
+        const $builder = tag => {
+            /** @var {any|HTMLElement} */
+            const element = document.createElement(tag);
+            /** @var {WrappedElementBuilder} */
+            const proxy = new Proxy(element, {
+                get(target, prop, _) {
+                    if (prop === 'build') {
+                        return () => element;
+                    }
+
+                    const alwaysUseAttributes = ['hidden', 'style'];
+
+                    return value => {
+                        if (!alwaysUseAttributes.includes(prop) && prop in element) {
+                            element[prop] = value;
+                        } else {
+                            element.setAttribute(prop.replace('_', '-'), value);
+                        }
+
+                        return proxy;
+                    };
+                },
+            });
+
+            return proxy;
+        };
+
+        /**
+         * insertAdjacentHtml() can open the door to XSS, so we take extra steps,
+         * even if the original values are already safe.
+         *
+         * @param {() => HTMLElement} createElement
+         * @param {(element: HTMLElement) => void} insert
+         * @param {(element: HTMLElement) => void} postprocess
+         * @return HTMLElement
+         */
+        const $populate = (createElement, insert = () => {}, postprocess = () => {}) => {
+            const element = createElement();
+            insert(element);
+            postprocess(element);
+
+            return element;
+        };
+
+        const $style = (id, style) => {
+            return document.head.insertAdjacentElement('beforeend', $populate(
+                () => $builder('style')
+                    .id(id)
+                    .build(),
+                element => element.textContent = style,
+            ));
+        };
+
+        return {$builder, $populate, $style};
+    })();
+
+    const Console = (() => {
+        const templates = {
+            default: [
+                '%cYTPA - YouTube Play All%c\n',
+                'color: #bf4bcc; font-size: 26px; font-weight: bold',
+                '',
+            ],
+            debug: [
+                '%cDEBUG%c\n',
+                'color: #1aff00; font-size: 48px; font-weight: bold',
+                '',
+            ],
+        };
+
+        const createLogger = (fn, template) => (...messages) => {
+            if (typeof messages[0] === "string") {
+                fn(template[0] + messages[0], ...template.slice(1), ...messages.slice(1));
+            } else {
+                fn(...template, ...messages);
+            }
+        };
+
+        return {
+            info: createLogger(console.info, templates.default),
+            error: createLogger(console.error, templates.default),
+            log: createLogger(console.debug, templates.debug),
+        };
+    })();
+
+    const Safety = (() => {
+        const handleError = e => console.error(e);
+        const attachSafetyListener = () => {
+            window.addEventListener('unhandledrejection', event => {
+                const e = event.reason || event;
+                const stack = (e && e.stack) || '';
+
+                if (!stack || !stack.includes('__ytpa_root_call__')) {
+                    return;
+                }
+
+                handleError(e);
+            });
+        };
+
+        const safeWrapCall = fn => ((...args) => {
+            try {
+                let result = fn(...args);
+                if (result instanceof Promise) {
+                    result = result.catch(handleError);
+                }
+
+                return result;
+            } catch (e) {
+                handleError(e);
+            }
+        });
+
+        const safeTimeout = (fn, duration) => setTimeout(safeWrapCall(fn), duration);
+        const safeInterval = (fn, duration) => setInterval(safeWrapCall(fn), duration);
+        const safeEventListener = (node, event, fn) => node.addEventListener(event, safeWrapCall(fn));
+
+        return {
+            handleError,
+            attachSafetyListener,
+            safeTimeout,
+            safeInterval,
+            safeEventListener,
+        };
+    })();
+
+    const AsyncOperations = (() => {
+        const waitForElement = async (selector, { root = document } = {}) => new Promise(resolve => {
+            const select = () => root.querySelector(selector), existing = select();
+            if (existing) return resolve(existing);
+
+            const observer = new MutationObserver(() => {
+                const existing = select();
+                if (existing) {
+                    observer.disconnect();
+                    resolve(existing);
+                }
+            });
+
+            observer.observe(root, { childList: true, subtree: true });
+        });
+
+        return { waitForElement };
+    })();
+
+    const Versioned = (() => {
+        const { waitForElement } = AsyncOperations;
+
+        const v20260220 = {
             /**
              * Latest / Popular / Oldest
              *
@@ -1228,15 +1067,314 @@
                     resolve(document.querySelectorAll('chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
                 }
             }),
-        },
+        };
+
+        return { v20260220 };
+    })();
+
+    const Greeter = (() => {
+        const fmt = Fmt;
+        const console = Console;
+
+        const style = x => 'font-family: sans-serif; font-size: 16px;' + x;
+        const greet = debugObject => console.info(
+            fmt.trimIndent(`
+                %cHi there!
+                Thank you for using YTPA.
+                
+                Please report problems at:
+                %chttps://rwe.ms/ytpa-issues%c
+                
+                If you have a free minute, consider answering a few non-intrusive questions:
+                %chttps://rwe.ms/ytpa-feedback%c
+                
+                If anything breaks, make sure to attach this to your issue:
+            `) + '%c' + JSON.stringify(debugObject, null, 2),
+            style(),
+            style('color: aqua'),
+            style(),
+            style('color: aqua'),
+            style(),
+            'color: #11ff00',
+        );
+
+        return { greet };
+    })();
+
+    return {
+        Fmt,
+        HtmlCreation,
+        Console,
+        Safety,
+        AsyncOperations,
+        Versioned,
+        Greeter,
     };
-})();
+}, () => [
+    ['ytpa-height', ''],
+    ['ytpa-style', /* language=css */ `
+        .ytpa-btn {
+            border-radius: 8px;
+            font-family: 'Roboto', 'Arial', sans-serif;
+            font-size: 1.4rem;
+            line-height: 2rem;
+            font-weight: 500;
+            margin-left: 0.6em; /* this might be obsolet in new UI, see below */
+            user-select: none;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
+            /*noinspection CssUnresolvedCustomProperty*/
+            height: var(--ytpa-height);
+        }
+
+        /* 20260220-0 margin seems unnecessary on new UI */
+        chip-bar-view-model.ytChipBarViewModelHost:has(div.ytChipBarViewModelChipWrapper) .ytChipBarViewModelChipBarScrollContainer + .ytpa-btn {
+            margin-left: 0
+        }
+
+        .ytpa-btn, .ytpa-btn > * {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .ytpa-btn-sections {
+            padding: 0;
+            flex-direction: row;
+        }
+
+        .ytpa-btn-sections > .ytpa-btn-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            vertical-align: top;
+            padding: 0 0.5em;
+        }
+
+        .ytpa-btn-sections > .ytpa-btn-section:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* Colors were updated to meet WCAG AAA (and AA on hover)*/
+
+        .ytpa-play-all-btn {
+            background-color: #890097;
+            color: white;
+        }
+
+        .ytpa-play-all-btn:hover {
+            background-color: #b247cc;
+        }
+
+        .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > * {
+            background-color: #2053B8;
+            color: white;
+        }
+
+        .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
+            background-color: #2b66da;
+        }
+
+        .ytpa-play-all-btn.ytpa-unsupported {
+            background-color: #828282;
+            color: white;
+        }
+
+        .ytpa-random-popover {
+            position: absolute;
+            border-radius: 8px;
+            font-size: 1.6rem;
+            transform: translate(-100%, 0.4em);
+            z-index: 10000;
+        }
+
+        .ytpa-random-popover > * {
+            display: block;
+            text-decoration: none;
+            padding: 0.4em;
+        }
+
+        .ytpa-random-popover > :first-child {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .ytpa-random-popover > :last-child {
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        .ytpa-random-popover > *:not(:last-child) {
+            border-bottom: 1px solid #6e8dbb;
+        }
+
+        .ytpa-button-container {
+            display: flex;
+            width: 100%;
+            margin-top: 1em;
+            margin-bottom: -1em;
+        }
+
+        ytd-rich-grid-renderer .ytpa-button-container > :first-child {
+            margin-left: 0;
+        }
+
+        /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
+        .ytpa-play-all-btn ~ .ytpa-play-all-btn,
+        .ytpa-random-btn ~ .ytpa-random-btn {
+            display: none;
+        }
+
+        /* Fix for mobile view */
+        ytm-feed-filter-chip-bar-renderer .ytpa-btn {
+            margin-right: 12px;
+            padding: 0 0.4em;
+            display: inline-flex !important;
+        }
+
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
+            display: none !important;
+        }
+
+        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+            height: 1em;
+            visibility: hidden;
+        }
+
+        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
+        #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+            filter: blur(2em);
+        }
+
+        .ytpa-random-notice {
+            padding: 1em;
+            z-index: 1000;
+        }
+
+        .ytpa-playlist-emulator {
+            margin-bottom: 1.6rem;
+            border-radius: 1rem;
+        }
+
+        .ytpa-playlist-emulator > .title {
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+            font-size: 2rem;
+            background-color: #323232;
+            color: white;
+            padding: 0.8rem;
+        }
+
+        .ytpa-playlist-emulator > .information {
+            font-size: 1rem;
+            background-color: #2b2a2a;
+            color: white;
+            padding: 0.8rem;
+        }
+
+        .ytpa-playlist-emulator > .footer {
+            border-bottom-left-radius: 1rem;
+            border-bottom-right-radius: 1rem;
+            background-color: #323232;
+            padding: 0.8rem;
+        }
+
+        .ytpa-playlist-emulator > .items {
+            max-height: 500px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .ytpa-playlist-emulator:not([data-failed]) > .items:empty::before {
+            content: 'Loading playlist...';
+            background-color: #626262;
+            padding: 0.8rem;
+            color: white;
+            font-size: 2rem;
+            display: block;
+        }
+
+        .ytpa-playlist-emulator[data-failed="rejected"] > .items:empty::before {
+            content: "Make sure to allow the external API call to ytplaylist.robert.wesner.io to keep viewing playlists that YouTube doesn't natively support!";
+            background-color: #491818;
+            padding: 0.8rem;
+            color: #ff7c7c;
+            font-size: 1rem;
+            display: block;
+        }
+
+        .ytpa-playlist-emulator > .items > .item {
+            background-color: #2c2c2c;
+            padding: 0.8rem;
+            border: 1px solid #1b1b1b;
+            font-size: 1.6rem;
+            color: white;
+            min-height: 5rem;
+            cursor: pointer;
+        }
+
+        .ytpa-playlist-emulator > .items > .item:hover {
+            background-color: #505050;
+        }
+
+        .ytpa-playlist-emulator > .items > .item:not(:last-of-type) {
+            border-bottom: 0;
+        }
+
+        .ytpa-playlist-emulator > .items > .item[data-current] {
+            background-color: #767676;
+        }
+
+        body:has(.ytpa-playlist-emulator) .ytp-prev-button.ytp-button,
+        body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
+            display: none !important;
+        }
+
+        /* hide when sorting by oldest */
+        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
+            display: none;
+        }
+
+        .ytpa-random-btn-tab-fix {
+            visibility: hidden;
+        }
+
+        .ytpa-button-container ~ .ytpa-button-container {
+            display: none;
+        }
+
+        /* [2025-11] Fix for the new UI */
+        .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
+            border-radius: 100px !important;
+            margin-left: 1em !important;
+        }
+    `],
+]);
 
 /**
- * @var {{ xmlHttpRequest: (object) => void }} GM
+ * @var {{
+ *  xmlHttpRequest: (object) => void,
+ *  info: {
+ *      script: {
+ *          version: string,
+ *      },
+ *  },
+ * }} GM
  */
 /**
- * @var {{ script: { version: string } }} GM_info
+ * @var {{ userAgentData: any }&Navigator} navigator
  */
 /**
  * @typedef {Object} WrappedElementBuilder
