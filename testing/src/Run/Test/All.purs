@@ -13,7 +13,7 @@ import Data.Either (Either(..))
 import Effect (Effect)
 import Command.Step (startStep, step)
 
--- TODO: perhaps it would be useful to have a --show option for tests to disable headless
+-- TODO: perhaps it would be useful to have a --show option for tests to disable headless without modification
 -- would be best if i had a handler moduler for that
 --
 -- argv <- Process.argv
@@ -71,10 +71,6 @@ script = do
             \page -> do
                 waitForClearScreen page
                 T.goto (T.URL "https://www.youtube.com/@TechnologyConnections/videos") page
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page
                 delay (Milliseconds 500.0)
@@ -138,14 +134,32 @@ script = do
                 delay (Milliseconds 500.0)
                 _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page
                 delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page
-                delay (Milliseconds 500.0)
-                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Live\"]") {} page
-                delay (Milliseconds 500.0)
         )
         >>= step' "live-popular" "https://www.youtube.com/playlist?list=UUPV5uNya42ayhsRnZOR3mO6NA&playnext=1" (
             \page -> do
                 waitForAndClick btnPopularSelector page
+                delay (Milliseconds 500.0)
+        )
+        >>= step' "members-view-videos-latest-implicit" "https://www.youtube.com/playlist?list=UULF7_YxT-KID8kRbqZo7MyscQ&playnext=1" (
+            \page -> do
+                waitForClearScreen page
+                T.goto (T.URL "https://www.youtube.com/@markiplier/videos") page
+                delay (Milliseconds 500.0)
+                _ <- T.pageWaitForSelector (T.Selector "yt-tab-shape[tab-title=\"Videos\"]") {} page
+                delay (Milliseconds 500.0)
+        )
+        >>= step' "members-view-videos-popular" "https://www.youtube.com/playlist?list=UULP7_YxT-KID8kRbqZo7MyscQ&playnext=1" (
+            \page -> do
+                waitForAndClick btnDropdownSelector page
+                delay (Milliseconds 500.0)
+                waitForAndClick btnDropdownMenuPopularSelector page
+                delay (Milliseconds 500.0)
+        )
+        >>= step' "members-view-videos-latest-explicit" "https://www.youtube.com/playlist?list=UULF7_YxT-KID8kRbqZo7MyscQ&playnext=1" (
+            \page -> do
+                waitForAndClick btnDropdownSelector page
+                delay (Milliseconds 500.0)
+                waitForAndClick btnDropdownMenuLatestSelector page
                 delay (Milliseconds 500.0)
         )
 
@@ -162,3 +176,7 @@ script = do
     where
         btnLatestSelector = simpleVideosTabTypeSelector 1
         btnPopularSelector = simpleVideosTabTypeSelector 2
+        btnDropdownSelector = "chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)"
+        btnDropdownMenuSelector = "tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*='display: none']) yt-sheet-view-model"
+        btnDropdownMenuLatestSelector = btnDropdownMenuSelector <> " yt-list-item-view-model:nth-child(1)"
+        btnDropdownMenuPopularSelector = btnDropdownMenuSelector <> " yt-list-item-view-model:nth-child(2)"

@@ -41,7 +41,7 @@ attemptNewUi = do
     res <- attempt (T.pageWaitForSelector (T.Selector ytpaSelector) { timeout: 15 } page')
     case res of
         -- all of this feels so wrong, and yet its correct
-        Left err -> A.succeed page'
+        Left _ -> A.succeed page'
         Right _ -> do
             T.close browser'
             A.fail "should not have worked, deal with it :^)"

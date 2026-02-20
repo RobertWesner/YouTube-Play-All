@@ -29,8 +29,9 @@ step :: T.Page -> String -> String -> StepSetup -> Result -> Aff Result
 step page label expected setup _ = do
     let fail' = fail label
 
-    info $ "[" <> label <> "] Testing for value \"" <> expected <> "\"..."
+    info $ "[" <> label <> "] Setup..."
     setup page
+    info $ "[" <> label <> "] Testing for value \"" <> expected <> "\"..."
 
     _ <- T.pageWaitForSelector (T.Selector ytpaSelector) {} page
     val <- T.unsafeEvaluateStringFunction ("document.querySelector('" <> ytpaSelector <> "')?.href") page
