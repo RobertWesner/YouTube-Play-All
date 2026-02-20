@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260208-0
+// @version         20260220-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -39,6 +39,12 @@
 
 (async function __ytpa_root_call__() {
     'use strict';
+
+    console.info(
+        '%cYTPA - YouTube Play All\n',
+        'color: #bf4bcc; font-size: 32px; font-weight: bold',
+        `You are using version ${GM_info.script.version} of YTPA!`,
+    );
 
     const handleError = e => {
         console.error(
@@ -146,7 +152,7 @@
             font-size: 1.4rem;
             line-height: 2rem;
             font-weight: 500;
-            margin-left: 0.6em;
+            margin-left: 0.6em; /* this might be obsolet in new UI, see below */
             user-select: none;
             display: inline-flex;
             flex-direction: column;
@@ -155,6 +161,11 @@
             padding: 0 0.5em;
             /*noinspection CssUnresolvedCustomProperty*/
             height: var(--ytpa-height);
+        }
+
+        /* 20260220-0 margin seems unnecessary on new UI */
+        chip-bar-view-model.ytChipBarViewModelHost:has(div.ytChipBarViewModelChipWrapper) .ytChipBarViewModelChipBarScrollContainer + .ytpa-btn {
+            margin-left: 0
         }
         
         .ytpa-btn, .ytpa-btn > * {
@@ -384,6 +395,21 @@
         }
     `);
 
+    const waitForElement = async (selector, { root = document } = {}) => new Promise(resolve => {
+        const select = () => root.querySelector(selector), existing = select();
+        if (existing) return resolve(existing);
+
+        const observer = new MutationObserver(() => {
+            const existing = select();
+            if (existing) {
+                observer.disconnect();
+                resolve(existing);
+            }
+        });
+
+        observer.observe(root, { childList: true, subtree: true });
+    });
+
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
     /**
@@ -495,14 +521,21 @@
             // desktop view
             : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, chip-bar-view-model.ytChipBarViewModelHost');
 
-        if (parent !== null && parent.tagName.toLowerCase() === 'chip-bar-view-model') {
+        // 202602 New UI
+        if (parent?.tagName?.toLowerCase() === 'chip-bar-view-model') {
             if (currentSelection === null) {
                 currentSelection = 1;
             }
 
-            parent.querySelectorAll('div.ytChipBarViewModelChipWrapper')
-                .forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1));
-            // parent = document.querySelector('#header.ytd-rich-grid-renderer');
+            // 20260220-0 See #56
+            versioning.v20260220.getTypeButtons().then(
+                elements => {
+                    console.log(elements)
+                    elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1))
+                },
+            );
+
+            // TODO: refine this into handling "members only"/"popular" for those specific playlists! See documentation
         }
 
         // #5: add a custom container for buttons if Latest/Popular/Oldest is missing
@@ -1177,6 +1210,29 @@
 
         safeInterval(applyRandomPlay, 1000);
     })();
+
+    // ---
+
+    const versioning = {
+        v20260220: {
+            /**
+             * Latest / Popular / Oldest
+             *
+             * Compatible with the new members-only UI.
+             */
+            getTypeButtons: async () => new Promise((resolve) => {
+                const dropdownButton = document.querySelector('chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)');
+                if (dropdownButton) {
+                    dropdownButton.addEventListener('click', () => {
+                        waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model')
+                            .then(element => resolve(element.querySelectorAll('yt-list-item-view-model')))
+                    });
+                } else {
+                    resolve(document.querySelectorAll('chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
+                }
+            }),
+        },
+    };
 })();
 
 /**

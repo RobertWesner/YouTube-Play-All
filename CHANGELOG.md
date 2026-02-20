@@ -1,14 +1,14 @@
 # YTPA Changelog
 
-## development
+## 20260220-0
 
 Strong progress towards improvements for future testing.
-
-[//]: # (TODO: fix https://github.com/RobertWesner/YouTube-Play-All/issues/56)
+Additional fixes for the new UI for channels with members-only content.
 
 * Made testing harness more modular.
 * Refactored initial testing to `Run.Test.All` module.
 * Added `Run.Playground.Ui.V20260219` module to testing harness.
+* [#56](https://github.com/RobertWesner/YouTube-Play-All/issues/56) Added compatibility to the new members-only UI.
 
 ## 20260208-0
 
