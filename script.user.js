@@ -529,10 +529,7 @@
 
             // 20260220-0 See #56
             versioning.v20260220.getTypeButtons().then(
-                elements => {
-                    console.log(elements)
-                    elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1))
-                },
+                elements => elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1)),
             );
 
             // TODO: refine this into handling "members only"/"popular" for those specific playlists! See documentation
