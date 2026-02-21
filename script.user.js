@@ -139,7 +139,9 @@ perhaps?
             )
         ;
     })();
-    unsafeWindow.__debug = () => ValuesDialog.show(components).then(console.log);
+    unsafeWindow.__debug = () => {
+        ValuesDialog.show(components).then(x => console.log(x));
+    };
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -1427,8 +1429,6 @@ perhaps?
 
         const base = x => ({
             of: x,
-            value: null,
-            initial: undefined,
             hooked: {},
         });
 
@@ -1452,26 +1452,60 @@ perhaps?
 
         // asX returns a terminal object (no further DSL chaining)
         const DSL = {
-            /** @var {_Component_Dsl<ComponentDummy, []>} */
-            asDummy: S({ dummy: _ }, [hookTest]),
-            /** @var {_Component_Dsl<ComponentText, []>} */
-            asText: S({ text: _ }),
-            /** @var {_Component_Dsl<ComponentTextarea, []>} */
-            asTextarea: S({ textarea: _ }),
-            /** @var {_Component_Dsl<ComponentPassword, []>} */
-            asPassword: S({ password: _ }),
-            /** @var {_Component_Dsl<ComponentNumber, []>} */
-            asNumber: S({ number: _ }),
-            /** @var {_Component_Dsl<ComponentToggle, []>} */
-            asToggle: S({ toggle: _ }),
-            /** @var {_Component_Dsl<ComponentOneOf, [_Component_Dsl_Param_ArrayObject]>} */
-            asOneOf: S({ oneOf: _ }),
-            /** @var {_Component_Dsl<ComponentAnyOf, [_Component_Dsl_Param_ArrayObject]>} */
-            asAnyOf: S({ anyOf: _ }),
+            /**
+             * @return {ComponentDummy}
+             */
+            asDummy() {
+                return { value: this.initial, ...S({ dummy: _ }, [hookTest])() };
+            },
+            /**
+             * @return {ComponentText}
+             */
+            asText() {
+                return { value: this.initial, ...S({ text: _ })() };
+            },
+            /**
+             * @return {ComponentTextarea}
+             */
+            asTextarea() {
+                return { value: this.initial, ...S({ textarea: _ })() };
+            },
+            /**
+             * @return {ComponentTextarea}
+             */
+            asPassword() {
+                return { value: this.initial, ...S({ password: _ })() };
+            },
+            /**
+             * @return {ComponentTextarea}
+             */
+            asNumber() {
+                return { value: this.initial, ...S({ number: _ })() };
+            },
+            /**
+             * @return {ComponentTextarea}
+             */
+            asToggle() {
+                return { value: this.initial, ...S({ toggle: _ })() };
+            },
+            /**
+             * @param {_Component_Dsl_Param_ArrayObject} xs
+             * @return {ComponentOneOf}
+             */
+            asOneOf(...xs) {
+                return { value: this.initial, ...S({ oneOf: _ })(...xs) };
+            },
+            /**
+             * @param {_Component_Dsl_Param_ArrayObject} xs
+             * @return {ComponentAnyOf}
+             */
+            asAnyOf(...xs) {
+                return { value: this.initial, ...S({ anyOf: _ })(...xs) };
+            },
         };
 
         const ofInitial = x => {
-            const result = Object.create(DSL)
+            const result = Object.create(DSL);
             result.initial = x;
 
             return result;
@@ -1504,7 +1538,7 @@ perhaps?
         const { $builder } = HtmlCreation;
         const { newDialog } = Dialog;
 
-        const ns = 'settings-component';
+        const ns = 'dialog-component';
         const baseClassName = `ytpa-${ns}`;
         const IdNamespace = Id.namespace(ns);
 
@@ -1525,7 +1559,6 @@ perhaps?
                     const id = IdNamespace.newHtmlId();
                     const helpId = `${id}-help`;
 
-                    // Purescript brain demands this
                     const init = element => component.initial !== undefined && (
                         component.m.toggle
                             ? (element.checked = !!component.initial)
@@ -1676,6 +1709,22 @@ perhaps?
             --ytpa-fg-secondary: var(--yt-spec-text-secondary);
             --ytpa-fg-disabled: var(--yt-spec-text-disabled);
             --ytpa-cta: var(--yt-spec-call-to-action);
+            /*--yt-spec-overlay-button-primary:rgba(255,255,255,0.3);*/
+            /*--yt-spec-overlay-button-secondary:rgba(255,255,255,0.1);*/
+            /*--yt-spec-overlay-button-secondary-darker:rgba(255,255,255,0.2);*/
+            
+            --ytpa---base-1: rgba(255, 255, 255, 0.064);
+            --ytpa---base-2: rgba(0, 0, 0, 0.128);
+        }
+
+        html[dark] {
+            --ytpa-bg-additive-heavy: var(--ytpa---base-2);
+            --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
+        }
+
+        html:not([dark]) {
+            --ytpa-bg-additive-heavy: var(--ytpa---base-1);
+            --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);
         }
     `],
     ['ytpa-style', /* language=css */ `
@@ -1974,17 +2023,21 @@ perhaps?
             border-radius: 1rem;
             background-color: var(--ytpa-bg-menu);
             color: var(--ytpa-fg-primary);
-            font-size: 24px;
+            font-size: 18px;
         }
-        
+
+        .ytpa-dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.72);
+        }
+
         .ytpa-dialog :is(input, button, textarea, select) {
             background-color: var(--ytpa-bg-additive);
         }
-        
+
         .ytpa-dialog :is(input, button, select) {
             cursor: pointer;
         }
-        
+
         .ytpa-dialog .ytpa-dialog-head {
             display: flex;
             gap: 2em;
@@ -1993,12 +2046,12 @@ perhaps?
         .ytpa-dialog .ytpa-dialog-title {
             flex: 1;
             display: inline-block;
-            font-size: 1.4em;
+            font-size: 1.6em;
             border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
             padding-bottom: 0.2em;
             margin-bottom: 0.6em;
         }
-        
+
         .ytpa-dialog .ytpa-dialog-head form {
             display: inline-block;
         }
@@ -2020,6 +2073,7 @@ perhaps?
         .ytpa-dialog {
             width: min(100% - 2rem, 80rem);
         }
+
         @media (max-width: 400px) {
             /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
             .ytpa-dialog {
@@ -2029,37 +2083,70 @@ perhaps?
             }
         }
     `],
-    ['ytpa-settings-dialog', /* language=css */ `
+    ['ytpa-dialog-components', /* language=css */ `
         /*
-            .ytpa-settings-component-container
+            .ytpa-dialog-component-container
                 div
                     label
-                    .ytpa-settings-component
-                .ytpa-settings-component-help
+                    .ytpa-dialog-component
+                .ytpa-dialog-component-help
 
             OR
 
-            .ytpa-settings-component-container
-                label.ytpa-settings-component
-                .ytpa-settings-component-help
+            .ytpa-dialog-component-container
+                label.ytpa-dialog-component
+                .ytpa-dialog-component-help
         */
 
-        .ytpa-settings-component-container:not(:last-child) {
+        .ytpa-dialog-component-container:not(:last-child) {
             margin-bottom: 1em;
         }
 
-        .ytpa-settings-component-container {
-            background-color: red; border: 2px solid darkred; /* TODO: remove */
+        .ytpa-dialog-component-container > div:has(
+            input:is([type="text"], [type="password"], [type="number"]),
+            textarea,
+            select
+        ) > label {
+            display: block;
+            margin-bottom: 0.2em;
+            font-size: 18px;
+        }
+
+        .ytpa-dialog-component-container :is(
+            input:is([type="text"], [type="password"], [type="number"]),
+            textarea,
+            select
+        ) {
+            color: var(--ytpa-fg-primary);
+            border-radius: 0.48rem;
+            background-color: var(--ytpa-bg-additive-heavy);
+            border: 2px solid var(--ytpa-bg-additive-inverse-heavy);
+            padding: 0.24em;
+            font-size: 16px;
+        }
+
+        .ytpa-dialog-component-container textarea {
+            min-width: 50%;
+            min-height: 72px;
+            max-width: 100%;
+        }
+
+        .ytpa-dialog-component-container {
             display: flex;
             flex-direction: column;
         }
 
-        .ytpa-settings-component {
-            background-color: cyan; border: 2px solid darkcyan; /* TODO: remove */
+        .ytpa-dialog-component {
         }
 
-        .ytpa-settings-component-help {
-            background-color: lime; border: 2px solid green; /* TODO: remove */
+        .ytpa-dialog-component-help {
+            background-color: var(--ytpa-bg-additive-inverse-heavy);
+            border: 2px solid var(--ytpa-bg-additive-heavy);
+            padding: 0.32em;
+            border-radius: 0.48rem;
+            white-space: pre;
+            margin-top: 0.32em;
+            font-size: 18px;
         }
     `],
 ]))((() => {
