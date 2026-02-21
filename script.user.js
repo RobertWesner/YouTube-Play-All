@@ -90,6 +90,10 @@
 
         return Component
             .collection()
+            .set(Component.key('dumdum', 'Hmm'), Component
+                .ofInitial('A')
+                .asDummy(),
+            )
             .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
                 .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come ComponentsStorage
                 .asOneOf({
@@ -105,13 +109,12 @@
             )
             .set(Component.key('dummyTextarea', 'Dummy Textarea'), Component
                 .ofInitial(Fmt.trimIndent(`
-A
-very
-long
-thing,
-perhaps?
-`
-                ))
+                    A
+                    very
+                    long
+                    thing,
+                    perhaps?
+                `))
                 .asTextarea()
                 .withHelp(Fmt.trimIndent( `
                     This is very important!!
@@ -1440,12 +1443,13 @@ perhaps?
         const hookTest = W('test');
         const hookHelp = W('help');
 
-        const S = (marker, hooks = []) => (x = null) => {
+        const S = (t, marker, hooks = []) => (x = null) => {
             const result = { ...base(x), m: marker};
             [...getDefaultHooks(), ...hooks].forEach(hook => {
                 const [key, w] = hook(result);
                 result[`with${Fmt.ucfirst(key)}`] = w;
             });
+            result.value = t.initial;
 
             return result;
         };
@@ -1456,51 +1460,51 @@ perhaps?
              * @return {ComponentDummy}
              */
             asDummy() {
-                return { value: this.initial, ...S({ dummy: _ }, [hookTest])() };
+                return S(this, { dummy: _ }, [hookTest])();
             },
             /**
              * @return {ComponentText}
              */
             asText() {
-                return { value: this.initial, ...S({ text: _ })() };
+                return S(this, { text: _ })();
             },
             /**
              * @return {ComponentTextarea}
              */
             asTextarea() {
-                return { value: this.initial, ...S({ textarea: _ })() };
+                return S(this, { textarea: _ })();
             },
             /**
              * @return {ComponentTextarea}
              */
             asPassword() {
-                return { value: this.initial, ...S({ password: _ })() };
+                return S(this, { password: _ })();
             },
             /**
              * @return {ComponentTextarea}
              */
             asNumber() {
-                return { value: this.initial, ...S({ number: _ })() };
+                return S(this, { number: _ })();
             },
             /**
              * @return {ComponentTextarea}
              */
             asToggle() {
-                return { value: this.initial, ...S({ toggle: _ })() };
+                return S(this, { toggle: _ })();
             },
             /**
              * @param {_Component_Dsl_Param_ArrayObject} xs
              * @return {ComponentOneOf}
              */
             asOneOf(...xs) {
-                return { value: this.initial, ...S({ oneOf: _ })(...xs) };
+                return S(this, { oneOf: _ })(...xs);
             },
             /**
              * @param {_Component_Dsl_Param_ArrayObject} xs
              * @return {ComponentAnyOf}
              */
             asAnyOf(...xs) {
-                return { value: this.initial, ...S({ anyOf: _ })(...xs) };
+                return S(this, { anyOf: _ })(...xs);
             },
         };
 
@@ -1559,10 +1563,10 @@ perhaps?
                     const id = IdNamespace.newHtmlId();
                     const helpId = `${id}-help`;
 
-                    const init = element => component.initial !== undefined && (
+                    const init = element => component.value !== undefined && (
                         component.m.toggle
-                            ? (element.checked = !!component.initial)
-                            : (element.value = component.initial)
+                            ? (element.checked = !!component.value)
+                            : (element.value = component.value)
                     );
                     const $b = tag => $builder(tag).className(baseClassName);
                     const build = builder => builder
@@ -1598,6 +1602,10 @@ perhaps?
                         )))
                         // TODO: finish with radios and checkboxes
                         || (has(component.m.oneOf) && build($b('select')
+                            .on(
+                                'change',
+                                event => component.value = event.target.value,
+                            )
                             .onBuildAppend(
                                 ...Object.entries(component.of).map(
                                     ([k, v]) => {
@@ -2258,7 +2266,7 @@ perhaps?
  * @typedef {T&{ withHelp: (string) => ComponentWithHookHelp<T>, hooked: hooked & { help: string } }} ComponentWithHookHelp
  */
 // VALUES
-/** @typedef {{ of: any, value: any, initial: any, m: {}, hooked: HookBag } | _Component_DefaultHook} ComponentBase */
+/** @typedef {{ of: any, value: any, value: any, m: {}, hooked: HookBag } | _Component_DefaultHook} ComponentBase */
 /** @typedef {{ m: { dummy: _ } } & ComponentBase | ComponentWithHookTest} ComponentDummy */
 /** @typedef {{ m: { text: _ } } & ComponentBase} ComponentText */
 /** @typedef {{ m: { textarea: _ } } & ComponentBase} ComponentTextarea */
