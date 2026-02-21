@@ -7,12 +7,16 @@
 // @namespace       http://robert.wesner.io/
 // @match           https://*.youtube.com/*
 // @icon            https://scripts.yt/favicon.ico
-// @grant           GM.xmlHttpRequest
 // @connect         ytplaylist.robert.wesner.io
 // @downloadURL     https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/script.user.js
 // @updateURL       https://raw.githubusercontent.com/RobertWesner/YouTube-Play-All/main/script.user.js
 // @homepageURL     https://scripts.yt/scripts/ytpa-youtube-play-all-YTPA-Play-All-YouTube-Videos-Of-A-Channel
 // @supportURL      https://github.com/RobertWesner/YouTube-Play-All/issues
+// @grant           GM.xmlHttpRequest
+// @grant           GM.getValue
+// @grant           GM.setValue
+// @grant           GM.deleteValue
+// @grant           GM.listValues
 // ==/UserScript==
 
 // ### SAFETY ###
@@ -44,14 +48,30 @@
 
     // --- setup ---
 
-    const modules = loadModules();
-    Object.entries(modules).forEach(([name, mod]) => {
+    const verifyModule = ([name, mod]) => {
         if (typeof mod === 'function') {
             // we cant gave compile time errors... because we don't compile
             console.error(`Tell your local dev he "forgot to call the module constructor for ${name}".\nThis script is probably broken now.`);
         }
-    });
+    };
 
+    /**
+     * @template {string} N
+     * @template {object} M
+     *
+     * @param {N} name
+     * @param {M} modules
+     * @return {Promise<M[N]>}
+     */
+    const awaitAsyncModule = async (name, modules) => {
+        const module = modules[name];
+        verifyModule([name, module]);
+
+        return module;
+    };
+
+    const [syncModules, asyncModules] = loadModules();
+    Object.entries(syncModules).forEach(verifyModule);
     const {
         ControlFlow: { _ },
         Fmt,
@@ -60,9 +80,11 @@
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
-        Components,
         SettingsDialog,
-    } = modules;
+        Debug,
+    } = syncModules;
+    const SettingsStorage = awaitAsyncModule('SettingsStorage', asyncModules);
+
     attachSafetyListener();
 
     console.info(`You are using version ${GM.info.script.version} of YTPA!`);
@@ -78,8 +100,8 @@
         console.info(`Running debug build version ${GM.info.script.version}, watch out for bugs!`);
     }
 
-    Components._init_();
     loadStyles().forEach(([id, css]) => $style(id, css));
+    unsafeWindow.YTPA_tools = Debug.YTPA_tools;
 
     // --- actual code ---
 
@@ -881,6 +903,38 @@
         };
     })();
 
+    const  Obj = (() => {
+        const isObject = item => (item && typeof item === 'object' && !Array.isArray(item));
+
+        // https://stackoverflow.com/a/48218209
+        const merge = (...objects) => {
+            const isObject = obj => obj && typeof obj === 'object';
+
+            return objects.reduce((prev, obj) => {
+                Object.keys(obj).forEach(key => {
+                    const pVal = prev[key];
+                    const oVal = obj[key];
+
+                    if (Array.isArray(pVal) && Array.isArray(oVal)) {
+                        prev[key] = pVal.concat(...oVal);
+                    }
+                    else if (isObject(pVal) && isObject(oVal)) {
+                        prev[key] = merge(pVal, oVal);
+                    }
+                    else {
+                        prev[key] = oVal;
+                    }
+                });
+
+                return prev;
+            }, {});
+        };
+
+        return {
+            merge,
+        };
+    })()
+
     const ControlFlow = (() => {
         /**
          * The universal sink.
@@ -991,6 +1045,13 @@
              */
             const proxy = element => {
                 let postBuildOperations = [];
+                const getOperations = () => {
+                    const operations = [...postBuildOperations.flat()];
+                    postBuildOperations = [];
+
+                    return operations;
+                };
+
                 const instance = new Proxy(element, {
                     get(target, prop, _) {
                         const P = operation => (...xs) => {
@@ -1003,11 +1064,21 @@
                         switch (prop) {
                             case 'build':
                                 return () => {
-                                    postBuildOperations.forEach(operation => operation(element));
-                                    postBuildOperations = [];
+                                    getOperations().forEach(operation => operation(element));
 
                                     return element;
                                 }
+                            case 'buildWithSync':
+                                return async () => {
+                                    for (const operation of getOperations()) {
+                                        const result = operation(element);
+                                        if (result && typeof result.then === 'function') {
+                                            await result;
+                                        }
+                                    }
+
+                                    return element;
+                                };
                             case 'addClass':
                                 return P(x => element.classList.add(x));
                             case 'onBuild':
@@ -1346,45 +1417,8 @@
         return { newDialog };
     })();
 
-    const Components = (() => {
-        const uiComponentsSlug = 'ytpa-ui-setting';
-
-        /**
-         * @param {() => string[]} pull
-         * @param {([]) => void} push
-         */
-        const settingOf = (pull, push) => ({
-            list: pull,
-            has: x => pull().includes(x),
-            add: (...x) => {
-                const settings = pull();
-                x.forEach(y => settings.includes(y) || settings.push(y));
-                push(settings);
-            },
-            remove: x => {
-                const settings = pull();
-                const index = settings.indexOf(x);
-                if (index <= -1) return;
-
-                settings.splice(index, 1);
-                push(settings);
-            },
-        });
-
-        const settings = {
-            ui: settingOf(
-                () => document.documentElement.getAttribute(uiComponentsSlug)?.split(' ') ?? [],
-                raw => document.documentElement.setAttribute(uiComponentsSlug, raw.join(' ')),
-            ),
-        };
-
-        const _init_ = () => Object.keys(G.s).forEach(key => settings[key].add(...G.defaults[key]));
-
-        return {...settings, _init_};
-    })();
-
     const ValuesDialogComponent = (() => {
-        const { _, pass } = ControlFlow;
+        const { _ } = ControlFlow;
 
         const getDefaultHooks = () => [hookHelp];
 
@@ -1646,6 +1680,161 @@
         return { show };
     })();
 
+    // solves the slight "circular" dependency with a promise
+    let setSettingsStorage = () => { throw 'Premature call to setSettingsStorage.' };
+    const settingsStoragePromise = new Promise(resolve => setSettingsStorage = resolve);
+
+    const SettingsHandlers = (() => {
+        const uiSettingsSlug = 'ytpa-ui-setting';
+
+        /**
+         * @param {() => string[]} pull
+         * @param {([]) => void} push
+         */
+        const settingOf = (pull, push) => ({
+            list: pull,
+            has: x => pull().includes(x),
+            add: (...x) => {
+                const settings = pull();
+                x.forEach(y => settings.includes(y) || settings.push(y));
+                push(settings);
+            },
+            remove: x => {
+                const settings = pull();
+                const index = settings.indexOf(x);
+                if (index <= -1) return;
+
+                settings.splice(index, 1);
+                push(settings);
+            },
+        });
+
+        const settings = {
+            ui: settingOf(
+                () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [],
+                raw => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' ')),
+            ),
+        };
+
+        /**
+         * @param {{ [key: string]: [string] }} loadedSettings
+         */
+        const init = loadedSettings => Object.keys(loadedSettings)
+            .forEach(key => settings[key].add(...loadedSettings[key].filter(x => !!x)));
+
+        // This is how we translate storage data into settings.
+
+        settingsStoragePromise.then(
+            /**
+             * @param {{ get: () => SettingsData }} storage
+             */
+            storage => {
+                Console.log(storage, storage.get())
+                const { general } = storage.get();
+
+                init({
+                    ui: [
+                        general.ui.buttonTheme,
+                        general.ui.spacerVisible
+                            && G.s.ui.spacer.show,
+                        general.ui.settingsButtonVisible
+                            && G.s.ui.settings.button.show,
+                    ],
+                });
+            },
+        );
+
+        return { ...settings };
+    })();
+
+    const SettingsStorage = (async () => {
+        const gmKey = 'settings';
+
+        /** @var {Settings|null} */
+        let cachedSettings = null;
+
+        /**
+         * @param label
+         * @param {(object) => object} migration
+         * @return {function(*): *}
+         */
+        const M = (label, migration) => previous => {
+            Object.freeze(previous);
+            const current = migration(previous);
+
+            if (!current || typeof current !== 'object') {
+                throw `Migration ${label} produced invalid result.`;
+            }
+
+            if (current === previous) {
+                throw `Migration ${label} did not return a new instance.`
+            }
+
+            return current;
+        };
+
+        const load = async () => {
+            cachedSettings = migrate(await GM.getValue(gmKey, {}));
+        };
+        const sync = async () => {
+            if (cachedSettings !== null) {
+                return GM.setValue(gmKey, cachedSettings);
+            }
+        };
+
+        // make sure to never change any of these post-release
+        // unless critically broken, a new migration is the preferred way
+        const migrations = [
+            () => ({ version: 0, data: {} }),
+            // 2026.02.21
+            M('initial', previous => Obj.merge(previous, {
+                data: {
+                    general: {
+                        ui: {
+                            buttonTheme: G.s.ui.button.theme.adaptiveOutline,
+                            spacerVisible: true,
+                            settingsButtonVisible: true,
+                        },
+                    },
+                },
+            })),
+        ];
+
+        const migrate = previous => {
+            const currentVersion = previous.version ?? 0;
+            if (currentVersion in migrations) {
+                const result = migrations[currentVersion](previous);
+                result.version = currentVersion + 1;
+
+                return migrate(result);
+            }
+
+            return previous;
+        };
+
+        /**
+         * @return {SettingsData|{}}
+         */
+        const get = () => cachedSettings?.data ?? {};
+        const set = async (key, value) => {
+            cachedSettings.data[key] = value;
+            await sync();
+        };
+        const clear = async () => GM.deleteValue(gmKey);
+
+        await load();
+
+        const exports = {
+            get,
+            set,
+            clear,
+            sync,
+        };
+        setSettingsStorage(exports);
+
+        return exports;
+    })();
+
     const SettingsDialog = (() => {
         // TODO: refactor me after testing
         const components = (() => {
@@ -1659,7 +1848,7 @@
                     .withTest('funky demo value'),
                 )
                 .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
-                    .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come ComponentsStorage (remember to build it capable of migrating versions, absolute overkill but nice)
+                    .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come SettingsStorage (remember to build it capable of migrating versions, absolute overkill but nice)
                     .asOneOf({
                         [G.s.ui.button.theme.classic]: 'Classic',
                         [G.s.ui.button.theme.adaptive]: 'Adaptive',
@@ -1716,8 +1905,21 @@
         };
     })();
 
-    return {
+    const Debug = (() => {
+        const YTPA_tools = {
+            storage: () => { throw 'Storage not loaded.'; },
+        };
+
+        settingsStoragePromise.then(storage => YTPA_tools.storage = storage);
+
+        return {
+            YTPA_tools,
+        };
+    })();
+
+    return [{
         Id,
+        Obj,
         ControlFlow,
         Fmt,
         HtmlCreation,
@@ -1727,11 +1929,14 @@
         Versioned,
         Greeter,
         Dialog,
-        Components,
         ValuesDialogComponent,
         ValuesDialog,
+        SettingsHandlers,
         SettingsDialog,
-    };
+        Debug
+    }, {
+        SettingsStorage,
+    }];
 }, () => {
     const s = G.s.ui;
     const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
@@ -2262,23 +2467,21 @@
         },
     };
 
-    const defaults = {
-        ui: [
-            settings.ui.button.theme.adaptiveOutline,
-            settings.ui.spacer.show,
-            settings.ui.settings.button.show,
-        ],
-    };
-
     return {
         s: settings,
-        defaults,
     };
 })());
 
 /**
+ * @var {{}} unsafeWindow
+ */
+/**
  * @var {{
- *  xmlHttpRequest: (object) => void,
+ *  xmlHttpRequest: (config: object) => void,
+ *  getValue: (key: string, defaultValue?: any) => Promise<any>,
+ *  setValue: (key: string, value: any) => Promise<void>,
+ *  deleteValue: (key: string) => Promise<void>,
+ *  listValues: () => Promise<string[]>,
  *  info: {
  *      script: {
  *          version: string,
@@ -2302,6 +2505,7 @@
 /**
  * @typedef {Object} WrappedElementBuilder
  * @property {() => HTMLElement} build
+ * @property {() => Promise<HTMLElement>} buildWithSync
  * @property {(fn: (element: HTMLElement) => void) => WrappedElementBuilder} onBuild
  * @property {(...append: Array<Node|string>) => WrappedElementBuilder} onBuildAppend
  * @property {(text: string) => WrappedElementBuilder} onBuildText
@@ -2382,4 +2586,20 @@
  */
 /**
  * @typedef {{ map: Map<{ name: string, displayText: string }, ComponentT> }} ValueDialogComponents
+ */
+/**
+ * @typedef {{
+ *  general: {
+ *      ui: {
+ *          buttonTheme: string,
+ *          spacerVisible: boolean,
+ *          settingsButtonVisible: boolean,
+ *      },
+ *  },
+ * }} SettingsData
+ *
+ * @typedef {{
+ *  version: number,
+ *  data: SettingsData,
+ * }} Settings
  */
