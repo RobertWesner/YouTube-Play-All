@@ -180,3 +180,19 @@ the simply restart the browser until it has the new one.
 ## License
 
 This project is licensed under the [MIT License](../../raw/main/LICENSE.txt).
+
+---
+
+**Important note:**
+
+This is not a typical userscript.
+
+The project evolved into a resilient and semi-modular codebase
+designed to survive a hostile SPA environment.
+It includes its own single-file standard library modules,
+automated testing harness written in Purescript,
+and extensive fallback handling.
+
+Is it overengineered? Yes.<br>
+Does this raise the barrier of entry to contributions? Yes.<br>
+Is it surprisingly stable? Yes.

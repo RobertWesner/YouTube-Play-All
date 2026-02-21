@@ -11,6 +11,7 @@ A lot of housekeeping.
 * Added way too many FP patterns.
 * Created an extensible DSL for declaratively rendering the settings-dialog.
 
+
 ## 20260220-0
 
 Strong progress towards improvements for future testing.
@@ -20,6 +21,7 @@ Additional fixes for the new UI for channels with members-only content.
 * Refactored initial testing to `Run.Test.All` module.
 * Added `Run.Playground.Ui.V20260219` module to testing harness.
 * [#56](https://github.com/RobertWesner/YouTube-Play-All/issues/56) Added compatibility to the new members-only UI.
+
 
 ## 20260208-0
 
