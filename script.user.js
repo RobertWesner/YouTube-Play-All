@@ -987,11 +987,12 @@
                 let postBuildOperations = [];
                 const instance = new Proxy(element, {
                     get(target, prop, _) {
-                        const P = operation => x => {
-                            operation(x);
+                        const P = operation => (...xs) => {
+                            operation(...xs);
 
                             return instance;
                         };
+                        const PBO = operation => P((...xs) => postBuildOperations.push(() => operation(...xs)));
 
                         switch (prop) {
                             case 'build':
@@ -1005,6 +1006,10 @@
                                 return P(x => element.classList.add(x));
                             case 'onBuild':
                                 return P(x => postBuildOperations.push(x));
+                            case 'onBuildAppend':
+                                return PBO((...xs) => element.append(...xs));
+                            case 'onBuildText':
+                                return PBO(x => element.textContent = x);
                         }
 
                         const alwaysUseAttributes = ['hidden', 'style'];
@@ -1097,12 +1102,12 @@
         };
 
         const $style = (id, style) => {
-            return document.head.insertAdjacentElement('beforeend', /* TODO: remove */ $populate(
-                $builder('style')
-                    .id(id)
-                    .build,
-                element => element.textContent = style,
-            ));
+            return document.head.insertAdjacentElement(
+                'beforeend',
+                $builder(`style#${id}`)
+                    .onBuild(element => element.textContent = style)
+                    .build(),
+            );
         };
 
         return { $builder, $populate, $style };
@@ -1253,40 +1258,29 @@
     })();
 
     const Dialog = (() => {
-        const { $builder, /* TODO: remove */ $populate } = HtmlCreation;
+        const { $builder } = HtmlCreation;
 
         const newDialog = () => {
             /**
              * @var {HTMLDivElement}
              */
-            const title = /* TODO: remove */ $populate($builder('div').className('ytpa-dialog-title').role('heading').build);
+            const title = $builder('div.ytpa-dialog-title[role="heading"]').build();
             /**
              * @var {HTMLDivElement}
              */
-            const body = /* TODO: remove */ $populate($builder('div').className('ytpa-dialog-body').build);
-            const build = () => /* TODO: remove */ $populate(
-                $builder('dialog')
-                    .className('ytpa-dialog')
-                    .build,
-                dialog => dialog.append(
-                    /* TODO: remove */ $populate(
-                        $builder('div').className('ytpa-dialog-head').build,
-                        head => head.append(
-                            title,
-                            /* TODO: remove */ $populate(
-                                $builder('form').method('dialog').build,
-                                form => form.append(
-                                    /* TODO: remove */ $populate(
-                                        $builder('button').className('ytpa-dialog-close-btn').build,
-                                        button => button.textContent = '×',
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
+            const body = $builder('div.ytpa-dialog-body').build();
+            
+            const build = () => $builder('dialog.ytpa-dialog').onBuildAppend(
+                    $builder('div.ytpa-dialog-head').onBuildAppend(
+                        title,
+                        $builder('form[method="dialog"]').onBuildAppend(
+                            $builder('button').className('ytpa-dialog-close-btn').onBuild(
+                                button => button.textContent = '×',
+                            ).build(),
+                        ).build(),
+                    ).build(),
                     body,
-                )
-            );
+                ).build();
             /**
              * @var {HTMLDialogElement}
              */
@@ -1464,7 +1458,7 @@
     })();
 
     const SettingsDialog = (() => {
-        const { $builder, /* TODO: remove */ $populate } = HtmlCreation;
+        const { $builder } = HtmlCreation;
         const { newDialog } = Dialog;
         const Component = SettingsDialogComponent;
 
@@ -1512,8 +1506,7 @@ perhaps?
              * @param {number} i
              * @return {HTMLElement}
              */
-            ([name, component], i) => /* TODO: remove */ $populate(
-                $builder('div').className('ytpa-settings-component-container').build,
+            ([name, component], i) => $builder('div.ytpa-settings-component-container').onBuild(
                 container => {
                     const className = 'ytpa-settings-component';
 
@@ -1524,48 +1517,37 @@ perhaps?
                             : (element.value = component._initial)
                     );
                     const $b = tag => $builder(tag).name(name).className(className).data_index(i.toString());
-                    const $p = builder => /* TODO: remove */ $populate(builder.build, init);
+                    const build = builder => builder.onBuild(init).build();
 
                     container.append(
-                        (component.text && $p($b('input').type('text')))
-                        || (component.textarea && $p($b('textarea')))
-                        || (component.password && $p($b('input').type('password')))
-                        || (component.number && $p($b('input').type('number')))
-                        || (component.toggle && /* TODO: remove */ $populate(
-                            $builder('label').className(className).build,
-                            label => label.append(
-                                $p($builder('input').type('checkbox')),
+                        (component.text && build($b('input[type="text"]')))
+                        || (component.textarea && build($b('textarea')))
+                        || (component.password && build($b('input[type="password"]')))
+                        || (component.number && build($b('input[type="number"]')))
+                        || (component.toggle && $builder('label')
+                            .className(className)
+                            .onBuildAppend(
+                                build($builder('input').type('checkbox')),
                                 component.hooked_label ?? 'Error: missing label',
-                            ),
-                        ))
+                            ).build()
+                        )
                         // TODO: finish with radios and checkboxes
-                        || (component.oneOf && /* TODO: remove */ $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
-                        || (component.anyOf && /* TODO: remove */ $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
+                        || (component.oneOf && $b('b').onBuildText('UNIMPLEMENTED').build())
+                        || (component.anyOf && $b('b').onBuildText('UNIMPLEMENTED').build()),
                     );
                 },
-            ),
+            ).build(),
         );
 
         const setup = push => {
+            const output = push($builder('pre').build());
             /** @var {HTMLTextAreaElement} */
-            const input = push(
-                /* TODO: remove */ $populate(
-                    $builder('textarea')
-                        .build,
-                ),
-            );
+            const input = push($builder('textarea').build());
             input.addEventListener('input', () => {
                 output.textContent = input.value;
             });
 
-            const output = push(
-                /* TODO: remove */ $populate(
-                    $builder('pre')
-                        .build,
-                ),
-            );
-
-            push(/* TODO: remove */ $populate($builder('hr').build));
+            push($builder('hr').build());
             elements.forEach(push);
         };
 
@@ -1999,25 +1981,27 @@ perhaps?
  * @typedef {Object} WrappedElementBuilder
  * @property {() => HTMLElement} build
  * @property {(fn: (element: HTMLElement) => void) => WrappedElementBuilder} onBuild
- * @property {(string) => WrappedElementBuilder} id
- * @property {(string) => WrappedElementBuilder} className
- * @property {(string) => WrappedElementBuilder} addClass
- * @property {(string) => WrappedElementBuilder} name
- * @property {(string) => WrappedElementBuilder} href
- * @property {(string) => WrappedElementBuilder} target
- * @property {(string) => WrappedElementBuilder} rel
- * @property {(string) => WrappedElementBuilder} role
- * @property {(string) => WrappedElementBuilder} tabindex
- * @property {(string) => WrappedElementBuilder} hidden
- * @property {(string) => WrappedElementBuilder} style
- * @property {(string) => WrappedElementBuilder} type
- * @property {(string) => WrappedElementBuilder} method
- * @property {(string) => WrappedElementBuilder} aria_label
- * @property {(string) => WrappedElementBuilder} aria_haspopup
- * @property {(string) => WrappedElementBuilder} aria_expanded
- * @property {(string) => WrappedElementBuilder} aria_hidden
- * @property {(string) => WrappedElementBuilder} data_list
- * @property {(string) => WrappedElementBuilder} data_index
+ * @property {(...append: Array<Node|string>) => WrappedElementBuilder} onBuildAppend
+ * @property {(text: string) => WrappedElementBuilder} onBuildText
+ * @property {(value: string) => WrappedElementBuilder} id
+ * @property {(value: string) => WrappedElementBuilder} className
+ * @property {(value: string) => WrappedElementBuilder} addClass
+ * @property {(value: string) => WrappedElementBuilder} name
+ * @property {(value: string) => WrappedElementBuilder} href
+ * @property {(value: string) => WrappedElementBuilder} target
+ * @property {(value: string) => WrappedElementBuilder} rel
+ * @property {(value: string) => WrappedElementBuilder} role
+ * @property {(value: string) => WrappedElementBuilder} tabindex
+ * @property {(value: string) => WrappedElementBuilder} hidden
+ * @property {(value: string) => WrappedElementBuilder} style
+ * @property {(value: string) => WrappedElementBuilder} type
+ * @property {(value: string) => WrappedElementBuilder} method
+ * @property {(value: string) => WrappedElementBuilder} aria_label
+ * @property {(value: string) => WrappedElementBuilder} aria_haspopup
+ * @property {(value: string) => WrappedElementBuilder} aria_expanded
+ * @property {(value: string) => WrappedElementBuilder} aria_hidden
+ * @property {(value: string) => WrappedElementBuilder} data_list
+ * @property {(value: string) => WrappedElementBuilder} data_index
  */
 /**
  * @template T
