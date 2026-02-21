@@ -61,8 +61,7 @@
         Versioned,
         Greeter,
         Components,
-        ValuesDialogComponent,
-        ValuesDialog,
+        SettingsDialog,
     } = modules;
     attachSafetyListener();
 
@@ -83,68 +82,6 @@
     loadStyles().forEach(([id, css]) => $style(id, css));
 
     // --- actual code ---
-
-    // TODO: remove/refactor me after testing
-    const components = (() => {
-        const Component = ValuesDialogComponent;
-
-        return Component
-            .collection()
-            .set(Component.key('dumdum', 'Hmm'), Component
-                .ofInitial('A')
-                .asDummy(),
-            )
-            .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
-                .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come ComponentsStorage
-                .asOneOf({
-                    [G.s.ui.button.theme.classic]: 'Classic',
-                    [G.s.ui.button.theme.adaptive]: 'Adaptive',
-                    [G.s.ui.button.theme.adaptiveOutline]: 'Adaptive with outline',
-                }),
-            )
-            // testing things, TODO: remove
-            .set(Component.key('dummyText', 'Dummy Text'), Component
-                .ofInitial('Hello World!')
-                .asText(),
-            )
-            .set(Component.key('dummyTextarea', 'Dummy Textarea'), Component
-                .ofInitial(Fmt.trimIndent(`
-                    A
-                    very
-                    long
-                    thing,
-                    perhaps?
-                `))
-                .asTextarea()
-                .withHelp(Fmt.trimIndent( `
-                    This is very important!!
-                `)),
-            )
-            .set(Component.key('dummyPassword', 'Dummy Password'), Component
-                .ofInitial('')
-                .asPassword(),
-            )
-            .set(Component.key('dummyNumber', 'Dummy Number'), Component
-                .ofInitial(0)
-                .asNumber(),
-            )
-            .set(Component.key('dummyToggle', 'Dummy Toggle'), Component
-                .ofInitial(false)
-                .asToggle()
-            )
-            .set(Component.key('dummyOneOf', 'Pick your poison'), Component
-                .ofInitial(-1)
-                .asOneOf({ '0': 'either!', '1': 'or!', '-1': '(none of the above)' }),
-            )
-            .set(Component.key('dummyAnyOf', 'Ice Cream Flavors'), Component
-                .ofInitial(2)
-                .asAnyOf({ 'vnll': 'vanilla', 'chclt': 'chocolate', 'strwbrr': 'strawberry', 'bnn': 'banana' }),
-            )
-        ;
-    })();
-    unsafeWindow.__debug = () => {
-        ValuesDialog.show(components).then(x => console.log(x));
-    };
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -244,7 +181,7 @@
             const computedStyle = getComputedStyle(container);
             height = container.offsetHeight - parseFloat(computedStyle.paddingTop);
         }
-        document.querySelector('#ytpa-height').textContent = `body { --ytpa-height: ${height}px; }`;
+        document.querySelector('#ytpa-btn-height').textContent = `body { --ytpa-btn-height: ${height}px; }`;
 
         if (id === '') {
             // do not apply prematurely, caused by mutation observer
@@ -276,6 +213,11 @@
             const grid = document.querySelector('ytd-rich-grid-renderer, ytm-rich-grid-renderer, div.ytChipBarViewModelChipWrapper');
             grid.insertAdjacentElement('afterbegin', $builder('div').className('ytpa-button-container').build());
             parent = grid.querySelector('.ytpa-button-container');
+        } else if (!document.querySelector('.ytpa-btn-spacer')) {
+            parent.insertAdjacentElement(
+                'beforeend',
+                $builder('spanr.ytpa-btn-spacer').build(),
+            );
         }
 
         // See: available-lists.md
@@ -400,6 +342,22 @@
             });
             safeEventListener(randomPopover, 'mouseleave', hidePopover);
             safeEventListener(randomPopover.querySelector('a:last-of-type'), 'focusout', hidePopover);
+
+            // settings currently also only on desktop
+            parent.insertAdjacentElement(
+                'beforeend',
+                $builder('span.ytpa-btn.ytpa-settings-btn[role="button"]')
+                    .onBuildAppend(
+                        document.importNode(new DOMParser().parseFromString(`
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" aria-label="open settings">
+                                <path d="M12 3.2 l1.2.3.6 1.7 1.6.7 1.6-.8 1.3 1.3-.8 1.6.7 1.6 1.7.6.3 1.2 -.3 1.2-1.7.6 -.7 1.6.8 1.6 -1.3 1.3-1.6-.8 -1.6.7-.6 1.7 -1.2.3-1.2-.3 -.6-1.7-1.6-.7 -1.6.8-1.3-1.3 .8-1.6-.7-1.6 -1.7-.6-.3-1.2 .3-1.2 1.7-.6 .7-1.6-.8-1.6 1.3-1.3 1.6.8 1.6-.7.6-1.7 z"></path>
+                                <circle cx="12" cy="11.5" r="3"></circle>
+                            </svg>
+                        `, 'image/svg+xml').documentElement, true),
+                    )
+                    .on('click', () => SettingsDialog.show())
+                    .build(),
+            );
         }
     };
 
@@ -1026,7 +984,7 @@
          *
          * @return WrappedElementBuilder
          */
-        const $builder = query => {
+        const $builder = (query, ns = null) => {
             /**
              * @param {HTMLElement} element
              * @return {HTMLElement&WrappedElementBuilder}
@@ -1688,6 +1646,76 @@
         return { show };
     })();
 
+    const SettingsDialog = (() => {
+        // TODO: refactor me after testing
+        const components = (() => {
+            const Component = ValuesDialogComponent;
+
+            return Component
+                .collection()
+                .set(Component.key('dumdum', 'Hmm'), Component
+                    .ofInitial('A')
+                    .asDummy()
+                    .withTest('funky demo value'),
+                )
+                .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
+                    .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come ComponentsStorage (remember to build it capable of migrating versions, absolute overkill but nice)
+                    .asOneOf({
+                        [G.s.ui.button.theme.classic]: 'Classic',
+                        [G.s.ui.button.theme.adaptive]: 'Adaptive',
+                        [G.s.ui.button.theme.adaptiveOutline]: 'Adaptive with outline',
+                    }),
+                )
+                // testing things, TODO: remove
+                .set(Component.key('dummyText', 'Dummy Text'), Component
+                    .ofInitial('Hello World!')
+                    .asText(),
+                )
+                .set(Component.key('dummyTextarea', 'Dummy Textarea'), Component
+                    .ofInitial(Fmt.trimIndent(`
+                    A
+                    very
+                    long
+                    thing,
+                    perhaps?
+                `))
+                    .asTextarea()
+                    .withHelp(Fmt.trimIndent( `
+                    This is very important!!
+                `)),
+                )
+                .set(Component.key('dummyPassword', 'Dummy Password'), Component
+                    .ofInitial('')
+                    .asPassword(),
+                )
+                .set(Component.key('dummyNumber', 'Dummy Number'), Component
+                    .ofInitial(0)
+                    .asNumber(),
+                )
+                .set(Component.key('dummyToggle', 'Dummy Toggle'), Component
+                    .ofInitial(false)
+                    .asToggle()
+                )
+                .set(Component.key('dummyOneOf', 'Pick your poison'), Component
+                    .ofInitial(-1)
+                    .asOneOf({ '0': 'either!', '1': 'or!', '-1': '(none of the above)' }),
+                )
+                .set(Component.key('dummyAnyOf', 'Ice Cream Flavors'), Component
+                    .ofInitial(2)
+                    .asAnyOf({ 'vnll': 'vanilla', 'chclt': 'chocolate', 'strwbrr': 'strawberry', 'bnn': 'banana' }),
+                )
+            ;
+        })();
+
+        const show = () => {
+            ValuesDialog.show(components).then(x => console.log(x));
+        };
+
+        return {
+            show,
+        };
+    })();
+
     return {
         Id,
         ControlFlow,
@@ -1702,307 +1730,325 @@
         Components,
         ValuesDialogComponent,
         ValuesDialog,
+        SettingsDialog,
     };
-}, () => [
-    ['ytpa-height', ''],
-    ['ytpa-base', /* language=css */ `
-        html {
-            /* Keep these in mind for UI theming */
-            --ytpa-bg-base: var(--yt-spec-base-background);
-            --ytpa-bg-raised: var(--yt-spec-raised-background);
-            --ytpa-bg-menu: var(--yt-spec-menu-background);
-            --ytpa-bg-additive: var(--yt-spec-additive-background);
-            --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse);
-            --ytpa-fg-primary: var(--yt-spec-text-primary);
-            --ytpa-fg-secondary: var(--yt-spec-text-secondary);
-            --ytpa-fg-disabled: var(--yt-spec-text-disabled);
-            --ytpa-cta: var(--yt-spec-call-to-action);
-            /*--yt-spec-overlay-button-primary:rgba(255,255,255,0.3);*/
-            /*--yt-spec-overlay-button-secondary:rgba(255,255,255,0.1);*/
-            /*--yt-spec-overlay-button-secondary-darker:rgba(255,255,255,0.2);*/
-            
-            --ytpa---base-1: rgba(255, 255, 255, 0.064);
-            --ytpa---base-2: rgba(0, 0, 0, 0.128);
-        }
+}, () => {
+    const s = G.s.ui;
+    const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
 
-        html[dark] {
-            --ytpa-bg-additive-heavy: var(--ytpa---base-2);
-            --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
-        }
-
-        html:not([dark]) {
-            --ytpa-bg-additive-heavy: var(--ytpa---base-1);
-            --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);
-        }
-    `],
-    ['ytpa-style', /* language=css */ `
-        .ytpa-btn {
-            border-radius: 8px;
-            font-family: 'Roboto', 'Arial', sans-serif;
-            font-size: 1.4rem;
-            line-height: 2rem;
-            font-weight: 500;
-            margin-left: 0.6em; /* this might be obsolet in new UI, see below */
-            user-select: none;
-            display: inline-flex;
-            flex-direction: column;
-            justify-content: center;
-            vertical-align: top;
-            padding: 0 0.5em;
-            /*noinspection CssUnresolvedCustomProperty*/
-            height: var(--ytpa-height);
-        }
-
-        /* 20260220-0 margin seems unnecessary on new UI */
-        chip-bar-view-model.ytChipBarViewModelHost:has(div.ytChipBarViewModelChipWrapper) .ytChipBarViewModelChipBarScrollContainer + .ytpa-btn {
-            margin-left: 0
-        }
-
-        .ytpa-btn, .ytpa-btn > * {
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .ytpa-btn-sections {
-            padding: 0;
-            flex-direction: row;
-        }
-
-        .ytpa-btn-sections > .ytpa-btn-section {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            vertical-align: top;
-            padding: 0 0.5em;
-        }
-
-        .ytpa-btn-sections > .ytpa-btn-section:first-child {
-            border-top-left-radius: 8px;
-            border-bottom-left-radius: 8px;
-        }
-
-        .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
-            border-top-right-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-
-        .ytpa-play-all-btn.ytpa-unsupported {
-            background-color: #828282;
-            color: white;
-        }
-
-        .ytpa-random-popover {
-            position: absolute;
-            border-radius: 8px;
-            font-size: 1.6rem;
-            transform: translate(-100%, 0.4em);
-            z-index: 10000;
-        }
-
-        .ytpa-random-popover > * {
-            display: block;
-            text-decoration: none;
-            padding: 0.4em;
-        }
-
-        .ytpa-random-popover > :first-child {
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-        }
-
-        .ytpa-random-popover > :last-child {
-            border-bottom-left-radius: 8px;
-            border-bottom-right-radius: 8px;
-        }
-
-        .ytpa-random-popover > *:not(:last-child) {
-            border-bottom: 1px solid #6e8dbb;
-        }
-
-        .ytpa-button-container {
-            display: flex;
-            width: 100%;
-            margin-top: 1em;
-            margin-bottom: -1em;
-        }
-
-        ytd-rich-grid-renderer .ytpa-button-container > :first-child {
-            margin-left: 0;
-        }
-
-        /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
-        .ytpa-play-all-btn ~ .ytpa-play-all-btn,
-        .ytpa-random-btn ~ .ytpa-random-btn {
-            display: none;
-        }
-
-        /* Fix for mobile view */
-        ytm-feed-filter-chip-bar-renderer .ytpa-btn {
-            margin-right: 12px;
-            padding: 0 0.4em;
-            display: inline-flex !important;
-        }
-
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
-        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
-        body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
-            display: none !important;
-        }
-
-        #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
-        #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
-            height: 1em;
-            visibility: hidden;
-        }
-
-        #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
-        #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
-            filter: blur(2em);
-        }
-
-        .ytpa-random-notice {
-            padding: 1em;
-            z-index: 1000;
-        }
-
-        .ytpa-playlist-emulator {
-            margin-bottom: 1.6rem;
-            border-radius: 1rem;
-        }
-
-        .ytpa-playlist-emulator > .title {
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
-            font-size: 2rem;
-            background-color: #323232;
-            color: white;
-            padding: 0.8rem;
-        }
-
-        .ytpa-playlist-emulator > .information {
-            font-size: 1rem;
-            background-color: #2b2a2a;
-            color: white;
-            padding: 0.8rem;
-        }
-
-        .ytpa-playlist-emulator > .footer {
-            border-bottom-left-radius: 1rem;
-            border-bottom-right-radius: 1rem;
-            background-color: #323232;
-            padding: 0.8rem;
-        }
-
-        .ytpa-playlist-emulator > .items {
-            max-height: 500px;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        .ytpa-playlist-emulator:not([data-failed]) > .items:empty::before {
-            content: 'Loading playlist...';
-            background-color: #626262;
-            padding: 0.8rem;
-            color: white;
-            font-size: 2rem;
-            display: block;
-        }
-
-        .ytpa-playlist-emulator[data-failed="rejected"] > .items:empty::before {
-            content: "Make sure to allow the external API call to ytplaylist.robert.wesner.io to keep viewing playlists that YouTube doesn't natively support!";
-            background-color: #491818;
-            padding: 0.8rem;
-            color: #ff7c7c;
-            font-size: 1rem;
-            display: block;
-        }
-
-        .ytpa-playlist-emulator > .items > .item {
-            background-color: #2c2c2c;
-            padding: 0.8rem;
-            border: 1px solid #1b1b1b;
-            font-size: 1.6rem;
-            color: white;
-            min-height: 5rem;
-            cursor: pointer;
-        }
-
-        .ytpa-playlist-emulator > .items > .item:hover {
-            background-color: #505050;
-        }
-
-        .ytpa-playlist-emulator > .items > .item:not(:last-of-type) {
-            border-bottom: 0;
-        }
-
-        .ytpa-playlist-emulator > .items > .item[data-current] {
-            background-color: #767676;
-        }
-
-        body:has(.ytpa-playlist-emulator) .ytp-prev-button.ytp-button,
-        body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
-            display: none !important;
-        }
-
-        /* hide when sorting by oldest */
-        ytm-feed-filter-chip-bar-renderer > div :nth-child(3).selected ~ .ytpa-btn:not(.ytpa-unsupported), ytd-feed-filter-chip-bar-renderer iron-selector#chips :nth-child(3).iron-selected ~ .ytpa-btn:not(.ytpa-unsupported) {
-            display: none;
-        }
-
-        .ytpa-random-btn-tab-fix {
-            visibility: hidden;
-            height: 0;
-            width: 0;
-        }
-
-        .ytpa-button-container ~ .ytpa-button-container {
-            display: none;
-        }
-
-        /* [2025-11] Fix for the new UI */
-        .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
-            border-radius: 100px !important;
-            margin-left: 1em !important;
-        }
-    `],
-    ['ytpa-buttons', (() => {
-        const s = G.s.ui;
-
-        const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
-
-        /* language=css */
-        return `
-            .ytpa-play-all-btn {
+    return [
+        ['ytpa-btn-height', ''],
+        ['ytpa-base', /* language=css */ `
+            html {
+                /* Keep these in mind for UI theming */
+                --ytpa-bg-base: var(--yt-spec-base-background);
+                --ytpa-bg-raised: var(--yt-spec-raised-background);
+                --ytpa-bg-menu: var(--yt-spec-menu-background);
+                --ytpa-bg-additive: var(--yt-spec-additive-background);
+                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse);
+                --ytpa-fg-primary: var(--yt-spec-text-primary);
+                --ytpa-fg-secondary: var(--yt-spec-text-secondary);
+                --ytpa-fg-disabled: var(--yt-spec-text-disabled);
+                --ytpa-cta: var(--yt-spec-call-to-action);
+                /*--yt-spec-overlay-button-primary:rgba(255,255,255,0.3);*/
+                /*--yt-spec-overlay-button-secondary:rgba(255,255,255,0.1);*/
+                /*--yt-spec-overlay-button-secondary-darker:rgba(255,255,255,0.2);*/
+                
+                --ytpa---base-1: rgba(255, 255, 255, 0.064);
+                --ytpa---base-2: rgba(0, 0, 0, 0.128);
+            }
+    
+            html[dark] {
+                --ytpa-bg-additive-heavy: var(--ytpa---base-2);
+                --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
+            }
+    
+            html:not([dark]) {
+                --ytpa-bg-additive-heavy: var(--ytpa---base-1);
+                --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);
+            }
+        `],
+        ['ytpa-style', /* language=css */ `
+            .ytpa-btn {
+                border-radius: 8px;
+                font-family: 'Roboto', 'Arial', sans-serif;
+                font-size: 1.4rem;
+                line-height: 2rem;
+                font-weight: 500;
+                margin-left: 0.6em; /* this might be obsolet in new UI, see below */
+                user-select: none;
+                display: inline-flex;
+                flex-direction: column;
+                justify-content: center;
+                vertical-align: top;
+                padding: 0 0.5em;
+                /*noinspection CssUnresolvedCustomProperty*/
+                height: var(--ytpa-btn-height);
+            }
+    
+            .ytpa-btn, .ytpa-btn > * {
+                text-decoration: none;
+                cursor: pointer;
+            }
+    
+            .ytpa-btn-sections {
+                padding: 0;
+                flex-direction: row;
+            }
+    
+            .ytpa-btn-sections > .ytpa-btn-section {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                vertical-align: top;
+                padding: 0 0.5em;
+            }
+    
+            .ytpa-btn-sections > .ytpa-btn-section:first-child {
+                border-top-left-radius: 8px;
+                border-bottom-left-radius: 8px;
+            }
+    
+            .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
+                border-top-right-radius: 8px;
+                border-bottom-right-radius: 8px;
+            }
+    
+            .ytpa-random-popover {
+                position: absolute;
+                border-radius: 8px;
+                font-size: 1.6rem;
+                transform: translate(-100%, 0.4em);
+                z-index: 10000;
+            }
+    
+            .ytpa-random-popover > * {
+                display: block;
+                text-decoration: none;
+                padding: 0.4em;
+            }
+    
+            .ytpa-random-popover > :first-child {
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+            }
+    
+            .ytpa-random-popover > :last-child {
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
+            }
+    
+            .ytpa-random-popover > *:not(:last-child) {
+                border-bottom: 1px solid #6e8dbb;
+            }
+    
+            .ytpa-button-container {
+                display: flex;
+                width: 100%;
+                margin-top: 1em;
+                margin-bottom: -1em;
+            }
+    
+            ytd-rich-grid-renderer .ytpa-button-container > :first-child {
+                margin-left: 0;
+            }
+    
+            /* fetch() API introduces a race condition. This hides the occasional duplicate buttons */
+            .ytpa-play-all-btn ~ .ytpa-play-all-btn,
+            .ytpa-random-btn ~ .ytpa-random-btn {
+                display: none;
+            }
+    
+            /* Fix for mobile view */
+            ytm-feed-filter-chip-bar-renderer .ytpa-btn {
+                margin-right: 12px;
+                padding: 0 0.4em;
+                display: inline-flex !important;
+            }
+    
+            body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+            body:has(#secondary ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]),
+            body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-prev-button.ytp-button,
+            body:has(#below ytd-playlist-panel-renderer[ytpa-random]) .ytp-next-button.ytp-button:not([ytpa-random="applied"]) {
+                display: none !important;
+            }
+    
+            #secondary ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer,
+            #below ytd-playlist-panel-renderer[ytpa-random] ytd-menu-renderer.ytd-playlist-panel-renderer {
+                height: 1em;
+                visibility: hidden;
+            }
+    
+            #secondary ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer,
+            #below ytd-playlist-panel-renderer[ytpa-random]:not(:hover) ytd-playlist-panel-video-renderer {
+                filter: blur(2em);
+            }
+    
+            .ytpa-random-notice {
+                padding: 1em;
+                z-index: 1000;
+            }
+    
+            .ytpa-playlist-emulator {
+                margin-bottom: 1.6rem;
+                border-radius: 1rem;
+            }
+    
+            .ytpa-playlist-emulator > .title {
+                border-top-left-radius: 1rem;
+                border-top-right-radius: 1rem;
+                font-size: 2rem;
+                background-color: #323232;
+                color: white;
+                padding: 0.8rem;
+            }
+    
+            .ytpa-playlist-emulator > .information {
+                font-size: 1rem;
+                background-color: #2b2a2a;
+                color: white;
+                padding: 0.8rem;
+            }
+    
+            .ytpa-playlist-emulator > .footer {
+                border-bottom-left-radius: 1rem;
+                border-bottom-right-radius: 1rem;
+                background-color: #323232;
+                padding: 0.8rem;
+            }
+    
+            .ytpa-playlist-emulator > .items {
+                max-height: 500px;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+    
+            .ytpa-playlist-emulator:not([data-failed]) > .items:empty::before {
+                content: 'Loading playlist...';
+                background-color: #626262;
+                padding: 0.8rem;
+                color: white;
+                font-size: 2rem;
+                display: block;
+            }
+    
+            .ytpa-playlist-emulator[data-failed="rejected"] > .items:empty::before {
+                content: "Make sure to allow the external API call to ytplaylist.robert.wesner.io to keep viewing playlists that YouTube doesn't natively support!";
+                background-color: #491818;
+                padding: 0.8rem;
+                color: #ff7c7c;
+                font-size: 1rem;
+                display: block;
+            }
+    
+            .ytpa-playlist-emulator > .items > .item {
+                background-color: #2c2c2c;
+                padding: 0.8rem;
+                border: 1px solid #1b1b1b;
+                font-size: 1.6rem;
+                color: white;
+                min-height: 5rem;
+                cursor: pointer;
+            }
+    
+            .ytpa-playlist-emulator > .items > .item:hover {
+                background-color: #505050;
+            }
+    
+            .ytpa-playlist-emulator > .items > .item:not(:last-of-type) {
+                border-bottom: 0;
+            }
+    
+            .ytpa-playlist-emulator > .items > .item[data-current] {
+                background-color: #767676;
+            }
+    
+            body:has(.ytpa-playlist-emulator) .ytp-prev-button.ytp-button,
+            body:has(.ytpa-playlist-emulator) .ytp-next-button.ytp-button:not([ytpa-emulation="applied"]) {
+                display: none !important;
+            }
+    
+            /* hide when sorting by oldest */
+            :is(
+                ytm-feed-filter-chip-bar-renderer > div,
+                ytd-feed-filter-chip-bar-renderer iron-selector#chips,
+                .ytChipBarViewModelHost
+            ):has(.ytpa-btn.ytpa-unsupported) .ytpa-btn.ytpa-unsupported ~ .ytpa-btn {
+                display: none;
+            }
+    
+            .ytpa-random-btn-tab-fix {
+                visibility: hidden;
+                height: 0;
+                width: 0;
+            }
+    
+            .ytpa-button-container ~ .ytpa-button-container {
+                display: none;
+            }
+    
+            /* [2025-11] Fix for the new UI */
+            .ytp-next-button.ytp-button.ytp-playlist-ui[ytpa-random="applied"] {
+                border-radius: 100px !important;
+                margin-left: 1em !important;
+            }
+        `],
+        ['ytpa-buttons', /* language=css */ `
+            html[dark] .ytpa-play-all-btn {
                 --ytpa-playbtn-uniquecolor: #890097;
                 --ytpa-playbtn-uniquecolor-hover: #b247cc;
                 --ytpa-playbtn-text: white;
             }
-            
-            .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
+
+            html[dark] .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
                 --ytpa-playbtn-uniquecolor: #2053b8;
                 --ytpa-playbtn-uniquecolor-hover: #2b66da;
                 --ytpa-playbtn-text: white;
             }
-            
+
+            html:not([dark]) .ytpa-play-all-btn {
+                --ytpa-playbtn-uniquecolor: #fac7ff;
+                --ytpa-playbtn-uniquecolor-hover: #eb8df1;
+                --ytpa-playbtn-text: white;
+            }
+
+            html:not([dark]) .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
+                --ytpa-playbtn-uniquecolor: #bad2ff;
+                --ytpa-playbtn-uniquecolor-hover: #3f60a1;
+                --ytpa-playbtn-text: white;
+            }
+
+            .ytpa-play-all-btn.ytpa-unsupported {
+                --ytpa-playbtn-uniquecolor: #828282 !important;
+                --ytpa-playbtn-uniquecolor-hover: var(--ytpa-playbtn-uniquecolor) !important;
+                --ytpa-playbtn-text: white;
+            }
+
+            .ytpa-settings-btn {
+                --ytpa-playbtn-uniquecolor: var(--ytpa-bg-additive);
+                --ytpa-playbtn-uniquecolor-hover: var(--ytpa-playbtn-uniquecolor);
+                --ytpa-playbtn-text: var(--ytpa-fg-primary);
+                display: none;
+            }
+
             /* CLASSIC */
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
                 background-color: var(--ytpa-playbtn-uniquecolor);
                 color: var(--ytpa-playbtn-text);
             }
 
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *):hover {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn):hover {
                 background-color: var(--ytpa-playbtn-uniquecolor-hover);
             }
 
             /* ADAPTIVE */
-            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
 
             /* ADAPTIVE OUTLINE */
-            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
@@ -2014,150 +2060,184 @@
                 box-sizing: content-box;
                 border: var(--thickness) solid var(--ytpa-playbtn-uniquecolor);
             }
-        `;
-    })()],
-    ['ytpa-dialog', /* language=css */ `
-        /*
-            .ytpa-dialog
-                .ytpa-dialog-head
-                    .ytpa-dialog-title
-                    form
-                        .ytpa-dialog-close-btn
-                .ytpa-dialog-body
-        */
-
-        .ytpa-dialog {
-            border: none;
-            border-radius: 1rem;
-            background-color: var(--ytpa-bg-menu);
-            color: var(--ytpa-fg-primary);
-            font-size: 18px;
-        }
-
-        .ytpa-dialog::backdrop {
-            background-color: rgba(0, 0, 0, 0.72);
-        }
-
-        .ytpa-dialog :is(input, button, textarea, select) {
-            background-color: var(--ytpa-bg-additive);
-        }
-
-        .ytpa-dialog :is(input, button, select) {
-            cursor: pointer;
-        }
-
-        .ytpa-dialog .ytpa-dialog-head {
-            display: flex;
-            gap: 2em;
-        }
-
-        .ytpa-dialog .ytpa-dialog-title {
-            flex: 1;
-            display: inline-block;
-            font-size: 1.6em;
-            border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
-            padding-bottom: 0.2em;
-            margin-bottom: 0.6em;
-        }
-
-        .ytpa-dialog .ytpa-dialog-head form {
-            display: inline-block;
-        }
-
-        .ytpa-dialog .ytpa-dialog-close-btn {
-            border: none;
-            color: var(--ytpa-fg-primary);
-            font-weight: bold;
-            font-size: 36px;
-            width: 46px;
-            height: 46px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border-radius: 0.32em;
-        }
-
-        .ytpa-dialog {
-            width: min(100% - 2rem, 80rem);
-        }
-
-        @media (max-width: 400px) {
-            /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
-            .ytpa-dialog {
-                width: 100vw;
-                height: 100vw;
-                border-radius: 0;
+            
+            ${ifUi(s.settings.button.show)} .ytpa-settings-btn {
+                display: flex !important;
             }
-        }
-    `],
-    ['ytpa-dialog-components', /* language=css */ `
-        /*
-            .ytpa-dialog-component-container
-                div
-                    label
-                    .ytpa-dialog-component
-                .ytpa-dialog-component-help
+        `],
+        ['ytpa-dialog', /* language=css */ `
+            /*
+                .ytpa-dialog
+                    .ytpa-dialog-head
+                        .ytpa-dialog-title
+                        form
+                            .ytpa-dialog-close-btn
+                    .ytpa-dialog-body
+            */
+    
+            .ytpa-dialog {
+                border: none;
+                border-radius: 1rem;
+                background-color: var(--ytpa-bg-menu);
+                color: var(--ytpa-fg-primary);
+                font-size: 18px;
+            }
+    
+            .ytpa-dialog::backdrop {
+                background-color: rgba(0, 0, 0, 0.72);
+            }
+    
+            .ytpa-dialog :is(input, button, textarea, select) {
+                background-color: var(--ytpa-bg-additive);
+            }
+    
+            .ytpa-dialog :is(input, button, select) {
+                cursor: pointer;
+            }
+    
+            .ytpa-dialog .ytpa-dialog-head {
+                display: flex;
+                gap: 2em;
+            }
+    
+            .ytpa-dialog .ytpa-dialog-title {
+                flex: 1;
+                display: inline-block;
+                font-size: 1.6em;
+                border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
+                padding-bottom: 0.2em;
+                margin-bottom: 0.6em;
+            }
+    
+            .ytpa-dialog .ytpa-dialog-head form {
+                display: inline-block;
+            }
+    
+            .ytpa-dialog .ytpa-dialog-close-btn {
+                border: none;
+                color: var(--ytpa-fg-primary);
+                font-weight: bold;
+                font-size: 36px;
+                width: 46px;
+                height: 46px;
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-radius: 0.32em;
+            }
+    
+            .ytpa-dialog {
+                width: min(100% - 2rem, 80rem);
+            }
+    
+            @media (max-width: 400px) {
+                /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
+                .ytpa-dialog {
+                    width: 100vw;
+                    height: 100vw;
+                    border-radius: 0;
+                }
+            }
+        `],
+        ['ytpa-dialog-components', /* language=css */ `
+            /*
+                .ytpa-dialog-component-container
+                    div
+                        label
+                        .ytpa-dialog-component
+                    .ytpa-dialog-component-help
+    
+                OR
+    
+                .ytpa-dialog-component-container
+                    label.ytpa-dialog-component
+                    .ytpa-dialog-component-help
+            */
+    
+            .ytpa-dialog-component-container:not(:last-child) {
+                margin-bottom: 1em;
+            }
+    
+            .ytpa-dialog-component-container > div:has(
+                input:is([type="text"], [type="password"], [type="number"]),
+                textarea,
+                select
+            ) > label {
+                display: block;
+                margin-bottom: 0.2em;
+                font-size: 18px;
+            }
+    
+            .ytpa-dialog-component-container :is(
+                input:is([type="text"], [type="password"], [type="number"]),
+                textarea,
+                select
+            ) {
+                color: var(--ytpa-fg-primary);
+                border-radius: 0.48rem;
+                background-color: var(--ytpa-bg-additive-heavy);
+                border: 2px solid var(--ytpa-bg-additive-inverse-heavy);
+                padding: 0.24em;
+                font-size: 16px;
+            }
+    
+            .ytpa-dialog-component-container textarea {
+                min-width: 50%;
+                min-height: 72px;
+                max-width: 100%;
+            }
+    
+            .ytpa-dialog-component-container {
+                display: flex;
+                flex-direction: column;
+            }
+    
+            .ytpa-dialog-component {
+            }
+    
+            .ytpa-dialog-component-help {
+                background-color: var(--ytpa-bg-additive-inverse-heavy);
+                border: 2px solid var(--ytpa-bg-additive-heavy);
+                padding: 0.32em;
+                border-radius: 0.48rem;
+                white-space: pre;
+                margin-top: 0.32em;
+                font-size: 18px;
+            }
+        `],
+        ['ytpa-spacer', /* language=css */ `
+            html {
+                --ytpa-btn-spacer-neigbor-margin-left: 0;
+            }
+            
+            ${ifUi(s.spacer.show)} {
+                --ytpa-btn-spacer-neigbor-margin-left: 0.6em;
+            }
+            
+            .ytpa-btn-spacer {
+                display: none;
+            }
 
-            OR
+            .ytpa-btn-spacer + .ytpa-btn {
+                margin-left: var(--ytpa-btn-spacer-neigbor-margin-left);
+            }
 
-            .ytpa-dialog-component-container
-                label.ytpa-dialog-component
-                .ytpa-dialog-component-help
-        */
-
-        .ytpa-dialog-component-container:not(:last-child) {
-            margin-bottom: 1em;
-        }
-
-        .ytpa-dialog-component-container > div:has(
-            input:is([type="text"], [type="password"], [type="number"]),
-            textarea,
-            select
-        ) > label {
-            display: block;
-            margin-bottom: 0.2em;
-            font-size: 18px;
-        }
-
-        .ytpa-dialog-component-container :is(
-            input:is([type="text"], [type="password"], [type="number"]),
-            textarea,
-            select
-        ) {
-            color: var(--ytpa-fg-primary);
-            border-radius: 0.48rem;
-            background-color: var(--ytpa-bg-additive-heavy);
-            border: 2px solid var(--ytpa-bg-additive-inverse-heavy);
-            padding: 0.24em;
-            font-size: 16px;
-        }
-
-        .ytpa-dialog-component-container textarea {
-            min-width: 50%;
-            min-height: 72px;
-            max-width: 100%;
-        }
-
-        .ytpa-dialog-component-container {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .ytpa-dialog-component {
-        }
-
-        .ytpa-dialog-component-help {
-            background-color: var(--ytpa-bg-additive-inverse-heavy);
-            border: 2px solid var(--ytpa-bg-additive-heavy);
-            padding: 0.32em;
-            border-radius: 0.48rem;
-            white-space: pre;
-            margin-top: 0.32em;
-            font-size: 18px;
-        }
-    `],
-]))((() => {
+            ${ifUi(s.spacer.show)} .ytpa-btn-spacer {
+                display: inline-block;
+                background-color: color-mix(in srgb, var(--ytpa-bg-additive) 64%, transparent);
+                width: 8px;
+                height: calc(var(--ytpa-btn-height) - 0.4rem);
+                transform: translateY(0.2rem);
+                border-radius: 1rem;
+            }
+            
+            .ytpa-btn-spacer ~ .ytpa-btn-spacer {
+                display: none !important;
+            }
+        `],
+    ];
+}))((() => {
     // -- scriptGlobals --
 
     // where the things live that are needed everywhere, except for the outside world
@@ -2171,11 +2251,23 @@
                     adaptiveOutline: 'button-theme-adaptive-outline',
                 },
             },
+            spacer: {
+                show: 'spacer-show'
+            },
+            settings: {
+                button: {
+                    show: 'settings-button-show',
+                },
+            },
         },
     };
 
     const defaults = {
-        ui: [settings.ui.button.theme.adaptiveOutline],
+        ui: [
+            settings.ui.button.theme.adaptiveOutline,
+            settings.ui.spacer.show,
+            settings.ui.settings.button.show,
+        ],
     };
 
     return {
