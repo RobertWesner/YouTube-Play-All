@@ -943,6 +943,7 @@
             // Until I realized I didn't need the () => {} anymore.
             // My Go & Purescript brain just really wanted that!
             // Anyhow, now its officially part of my own little stdlib.
+            // UPDATE: It was very useful indeed.
             (() => _.x(1)[_ - 10]({ _ })[_._])(_)._ = _._('???')._._._._['_'];
         } catch (e) {
             console.error('The hole has failed us.', e);
@@ -977,31 +978,103 @@
         /**
          * @return WrappedElementBuilder
          */
-        const $builder = tag => {
-            /** @var {any|HTMLElement} */
-            const element = document.createElement(tag);
-            /** @var {WrappedElementBuilder} */
-            const proxy = new Proxy(element, {
-                get(target, prop, _) {
-                    if (prop === 'build') {
-                        return () => element;
-                    }
+        const $builder = query => {
+            /**
+             * @param {HTMLElement} element
+             * @return {HTMLElement&WrappedElementBuilder}
+             */
+            const proxy = element => {
+                let postBuildOperations = [];
+                const instance = new Proxy(element, {
+                    get(target, prop, _) {
+                        const P = operation => x => {
+                            operation(x);
 
-                    const alwaysUseAttributes = ['hidden', 'style'];
+                            return instance;
+                        };
 
-                    return value => {
-                        if (!alwaysUseAttributes.includes(prop) && prop in element) {
-                            element[prop] = value;
-                        } else {
-                            element.setAttribute(prop.replaceAll('_', '-'), value);
+                        switch (prop) {
+                            case 'build':
+                                return () => {
+                                    postBuildOperations.forEach(operation => operation(element));
+                                    postBuildOperations = [];
+
+                                    return element;
+                                }
+                            case 'addClass':
+                                return P(x => element.classList.add(x));
+                            case 'onBuild':
+                                return P(x => postBuildOperations.push(x));
                         }
 
-                        return proxy;
-                    };
-                },
-            });
+                        const alwaysUseAttributes = ['hidden', 'style'];
 
-            return proxy;
+                        return value => {
+                            if (!alwaysUseAttributes.includes(prop) && prop in element) {
+                                element[prop] = value;
+                            } else {
+                                element.setAttribute(prop.replaceAll('_', '-'), value);
+                            }
+
+                            return instance;
+                        };
+                    },
+                });
+
+                return instance;
+            };
+
+            /**
+             * Does NOT call build().
+             * Instead returns a builder instance!
+             *
+             * Example:
+             *  parseQuery(`button#foo.a.b.c[aria-label="${label}"]`)
+             *
+             * Result:
+             *  $builder('button')
+             *      .id('foo')
+             *      .className('a b c')
+             *      .aria_label(`${label}`)
+             *
+             * @param query
+             * @return {any|HTMLElement}
+             */
+            const parseQuery = query => {
+                if (query.match(/\s/)) {
+                    throw 'Spaces are not allowed in $builder query.';
+                }
+
+                const match = query.match(/^[a-zA-Z0-9-]+/);
+                if (!match) {
+                    throw 'Invalid tag supplied to parseQuery.';
+                }
+                const tag = match[0];
+
+                const builder = proxy(document.createElement(tag));
+                if (!query.match(/^[a-zA-Z0-9-]+$/)) {
+                    const split = text => text.match(/^[a-zA-Z0-9-]+((?:[#.][a-zA-Z0-9-]+)+)?((?:\[[a-zA-Z0-9-]+(?:=".*?")?])+)?/);
+
+                    const result = split(query);
+                    const basic = result[1] ?? '';
+                    const attributes = result[2] ?? '';
+
+                    basic.matchAll(/([#.])([a-zA-Z0-9-]+)/g).forEach(([ignore, type, value]) => {
+                        ({
+                            '#': builder.id,
+                            '.': builder.addClass,
+                        })[type](value);
+                    });
+
+                    attributes.matchAll(/\[([a-zA-Z0-9-]+)(?:="(.*?)")?]/g).forEach(([ignore, key, value]) => {
+                        builder[key](value);
+                    });
+                }
+
+                return builder;
+            };
+
+            return parseQuery(query);
         };
 
         /**
@@ -1012,6 +1085,8 @@
          * @param {(element: HTMLElement) => void} insert
          * @param {(element: HTMLElement) => void} postprocess
          * @return HTMLElement
+         *
+         * @deprecated Use new $builder onBuild-API instead.
          */
         const $populate = (createElement, insert = () => {}, postprocess = () => {}) => {
             const element = createElement();
@@ -1022,7 +1097,7 @@
         };
 
         const $style = (id, style) => {
-            return document.head.insertAdjacentElement('beforeend', $populate(
+            return document.head.insertAdjacentElement('beforeend', /* TODO: remove */ $populate(
                 $builder('style')
                     .id(id)
                     .build,
@@ -1178,30 +1253,30 @@
     })();
 
     const Dialog = (() => {
-        const { $builder, $populate } = HtmlCreation;
+        const { $builder, /* TODO: remove */ $populate } = HtmlCreation;
 
         const newDialog = () => {
             /**
              * @var {HTMLDivElement}
              */
-            const title = $populate($builder('div').className('ytpa-dialog-title').role('heading').build);
+            const title = /* TODO: remove */ $populate($builder('div').className('ytpa-dialog-title').role('heading').build);
             /**
              * @var {HTMLDivElement}
              */
-            const body = $populate($builder('div').className('ytpa-dialog-body').build);
-            const build = () => $populate(
+            const body = /* TODO: remove */ $populate($builder('div').className('ytpa-dialog-body').build);
+            const build = () => /* TODO: remove */ $populate(
                 $builder('dialog')
                     .className('ytpa-dialog')
                     .build,
                 dialog => dialog.append(
-                    $populate(
+                    /* TODO: remove */ $populate(
                         $builder('div').className('ytpa-dialog-head').build,
                         head => head.append(
                             title,
-                            $populate(
+                            /* TODO: remove */ $populate(
                                 $builder('form').method('dialog').build,
                                 form => form.append(
-                                    $populate(
+                                    /* TODO: remove */ $populate(
                                         $builder('button').className('ytpa-dialog-close-btn').build,
                                         button => button.textContent = '×',
                                     ),
@@ -1389,7 +1464,7 @@
     })();
 
     const SettingsDialog = (() => {
-        const { $builder, $populate } = HtmlCreation;
+        const { $builder, /* TODO: remove */ $populate } = HtmlCreation;
         const { newDialog } = Dialog;
         const Component = SettingsDialogComponent;
 
@@ -1437,7 +1512,7 @@ perhaps?
              * @param {number} i
              * @return {HTMLElement}
              */
-            ([name, component], i) => $populate(
+            ([name, component], i) => /* TODO: remove */ $populate(
                 $builder('div').className('ytpa-settings-component-container').build,
                 container => {
                     const className = 'ytpa-settings-component';
@@ -1449,14 +1524,14 @@ perhaps?
                             : (element.value = component._initial)
                     );
                     const $b = tag => $builder(tag).name(name).className(className).data_index(i.toString());
-                    const $p = builder => $populate(builder.build, init);
+                    const $p = builder => /* TODO: remove */ $populate(builder.build, init);
 
                     container.append(
                         (component.text && $p($b('input').type('text')))
                         || (component.textarea && $p($b('textarea')))
                         || (component.password && $p($b('input').type('password')))
                         || (component.number && $p($b('input').type('number')))
-                        || (component.toggle && $populate(
+                        || (component.toggle && /* TODO: remove */ $populate(
                             $builder('label').className(className).build,
                             label => label.append(
                                 $p($builder('input').type('checkbox')),
@@ -1464,8 +1539,8 @@ perhaps?
                             ),
                         ))
                         // TODO: finish with radios and checkboxes
-                        || (component.oneOf && $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
-                        || (component.anyOf && $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
+                        || (component.oneOf && /* TODO: remove */ $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
+                        || (component.anyOf && /* TODO: remove */ $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
                     );
                 },
             ),
@@ -1474,7 +1549,7 @@ perhaps?
         const setup = push => {
             /** @var {HTMLTextAreaElement} */
             const input = push(
-                $populate(
+                /* TODO: remove */ $populate(
                     $builder('textarea')
                         .build,
                 ),
@@ -1484,13 +1559,13 @@ perhaps?
             });
 
             const output = push(
-                $populate(
+                /* TODO: remove */ $populate(
                     $builder('pre')
                         .build,
                 ),
             );
 
-            push($populate($builder('hr').build));
+            push(/* TODO: remove */ $populate($builder('hr').build));
             elements.forEach(push);
         };
 
@@ -1923,8 +1998,10 @@ perhaps?
 /**
  * @typedef {Object} WrappedElementBuilder
  * @property {() => HTMLElement} build
+ * @property {(fn: (element: HTMLElement) => void) => WrappedElementBuilder} onBuild
  * @property {(string) => WrappedElementBuilder} id
  * @property {(string) => WrappedElementBuilder} className
+ * @property {(string) => WrappedElementBuilder} addClass
  * @property {(string) => WrappedElementBuilder} name
  * @property {(string) => WrappedElementBuilder} href
  * @property {(string) => WrappedElementBuilder} target
