@@ -37,6 +37,8 @@
 // GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
+// TODO: REALLY have to test all of this on mobile, been a while
+
 (async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
 
@@ -51,11 +53,14 @@
     });
 
     const {
+        ControlFlow: { _ },
+        Fmt,
         HtmlCreation: { $populate, $builder, $style },
         Console: console,
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
+        Dialog: { newDialog },
     } = modules;
     attachSafetyListener();
 
@@ -75,6 +80,31 @@
     loadStyles().forEach(([id, css]) => $style(id, css));
 
     // --- actual code ---
+
+    // TODO: remove me after testing
+    unsafeWindow.__debug = () => {
+        newDialog()
+            .with('dummytitle', push => {
+                /** @var {HTMLTextAreaElement} */
+                const input = push(
+                    $populate(
+                        $builder('textarea')
+                            .build,
+                    ),
+                );
+                input.addEventListener('input', () => {
+                    output.textContent = input.value;
+                });
+
+                const output = push(
+                    $populate(
+                        $builder('pre')
+                            .build,
+                    ),
+                );
+            })
+            .then(() => console.log('that was fun!'));
+    }
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -225,11 +255,11 @@
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
-                    () => $builder('a')
+                    $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
                         .role('button')
-                        .build(),
+                        .build,
                     element => element.textContent = 'Play Popular',
                 ),
             );
@@ -237,11 +267,11 @@
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
-                    () => $builder('a')
+                    $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn')
                         .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
                         .role('button')
-                        .build(),
+                        .build,
                     element => element.textContent = 'Play All',
                 ),
             );
@@ -249,13 +279,13 @@
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
-                    () => $builder('a')
+                    $builder('a')
                         .className('ytpa-btn ytpa-play-all-btn ytpa-unsupported')
                         .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
                         .role('button')
                         .target('_blank')
                         .rel('noreferrer')
-                        .build(),
+                        .build,
                     element => element.textContent = 'No Playlist Found',
                 ),
             );
@@ -273,35 +303,35 @@
             parent.insertAdjacentElement(
                 'beforeend',
                 $populate(
-                    () => $builder('span')
+                    $builder('span')
                         .className('ytpa-btn ytpa-random-btn ytpa-btn-sections')
-                        .build(),
+                        .build,
                     element => element.append(
                         $populate(
-                            () => $builder('a')
+                            $builder('a')
                                 .className('ytpa-btn-section')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
                                 .role('button')
-                                .build(),
+                                .build,
                             element => element.textContent = 'Play Random',
                         ),
                         $populate(
-                            () => $builder('span')
+                            $builder('span')
                                 .className('ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover')
                                 .role('button')
                                 .tabindex('0')
                                 .aria_label('More options for random play')
                                 .aria_haspopup('menu')
                                 .aria_expanded('false')
-                                .build(),
+                                .build,
                             element => element.textContent = '▾',
                         ),
                         $populate(
-                            () => $builder('span')
+                            $builder('span')
                                 .className('ytpa-random-btn-tab-fix')
                                 .tabindex('-1')
                                 .aria_hidden('true')
-                                .build(),
+                                .build,
                             element => element.textContent = '▾',
                         ),
                     ),
@@ -311,27 +341,27 @@
             document.body.insertAdjacentElement(
                 'afterbegin',
                 $populate(
-                    () => $builder('div')
+                    $builder('div')
                         .className('ytpa-random-popover')
                         .role('menu')
                         .aria_label('Random play options')
                         .hidden('')
-                        .build(),
+                        .build,
                     element => element.append(
                         $populate(
-                            () => $builder('a')
+                            $builder('a')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest`)
                                 .aria_label('Play Random prefer newest')
                                 .role('menuitem')
-                                .build(),
+                                .build,
                             element => element.textContent = 'Prefer newest',
                         ),
                         $populate(
-                            () => $builder('a')
+                            $builder('a')
                                 .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1`)
                                 .aria_label('Play Random prefer oldest')
                                 .role('menuitem')
-                                .build(),
+                                .build,
                             element => element.textContent = 'Prefer oldest',
                         ),
                     ),
@@ -554,25 +584,25 @@
 
             document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist')
                 .insertAdjacentElement('afterend', $populate(
-                    () => $builder('div')
+                    $builder('div')
                         .className('ytpa-playlist-emulator')
                         .data_list(list)
-                        .build(),
+                        .build,
                     element => element.append(
                         $populate(
-                            () => $builder('div')
+                            $builder('div')
                                 .className('title')
-                                .build(),
+                                .build,
                             element => element.textContent = 'Playlist emulator',
                         ),
                         $populate(
-                            () => $builder('div')
+                            $builder('div')
                                 .className('information')
-                                .build(),
-                            element => element.textContent = `
-                            It looks like YouTube is unable to handle this large playlist.
-                            Playlist emulation is a limited fallback feature of YTPA to enable you to watch even more content.
-                        `.trim(),
+                                .build,
+                            element => element.textContent = Fmt.trimIndent(`
+                                It looks like YouTube is unable to handle this large playlist.
+                                Playlist emulation is a limited fallback feature of YTPA to enable you to watch even more content.
+                            `),
                         ),
                         $builder('div')
                             .className('items')
@@ -760,7 +790,7 @@
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
             playlistContainer.insertAdjacentElement('afterbegin', $populate(
-                () => $builder('div').className('ytpa-random-notice').build(),
+                ('div').className('ytpa-random-notice').build,
                 element => element.append(
                     document.createTextNode('This playlist is using random play.'),
                     document.createElement('br'),
@@ -882,6 +912,64 @@
 
     // The best part? Jetbrains-IDEs are smart enough to resolve all of this.
 
+    const ControlFlow = (() => {
+        /**
+         * The universal sink.
+         * There is nothing it doesn't tolerate!
+         *
+         * _.x(1)[_ - 10]({ _ })[_._] = '???';
+         *
+         * If anyone ever, anywhere, needs this, feel free to use, it's MIT.
+         * Keep the jsdoc if possible to avoid needing an separate license file.
+         *
+         * MIT License — Copyright (c) 2026 Robert Wesner
+         *
+         * Permission is hereby granted, free of charge, to any person obtaining a copy
+         * of this software and associated documentation files (the "Software"), to deal
+         * in the Software without restriction, including without limitation the rights
+         * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+         * copies of the Software, and to permit persons to whom the Software is
+         * furnished to do so, subject to the following condition:
+         * The above copyright notice and this permission notice shall be included in
+         * all copies or substantial portions of the Software.
+         * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+         *
+         * Godspeed.
+         *
+         * @type {any}
+         *
+         * @license MIT
+         * @author Robert Wesner
+         * @since 2026-02-20 22:20:13
+         */
+        const _ = new Proxy(() => {}, {
+            apply: () => _,
+            construct: () => _,
+            set: () => true,
+            get(target, prop) {
+                return {
+                    [Symbol.toPrimitive]: () => '',
+                    'toString': () => '',
+                    'valueOf': () => 0,
+                    'then': undefined,
+                }[prop] ?? _;
+            },
+        });
+
+        try {
+            // I thought I actually "needed" (= wanted) it to avoid multiple () => {}
+            // Then I let it escalate slightly...
+            // Until I realized I didn't need the () => {} anymore.
+            // My Go & Purescript brain just really wanted that!
+            // Anyhow, now its officially part of my own little stdlib.
+            (() => _.x(1)[_ - 10]({ _ })[_._])(_)._ = _._('???')._._._._['_'];
+        } catch (e) {
+            console.error('The hole has failed us.', e);
+        }
+
+        return { _ };
+    })();
+
     const Fmt = (() => {
         const trimIndent = string => {
             const lines = string.replace(/^\n/, '').split('\n');
@@ -918,7 +1006,7 @@
                         if (!alwaysUseAttributes.includes(prop) && prop in element) {
                             element[prop] = value;
                         } else {
-                            element.setAttribute(prop.replace('_', '-'), value);
+                            element.setAttribute(prop.replaceAll('_', '-'), value);
                         }
 
                         return proxy;
@@ -948,14 +1036,14 @@
 
         const $style = (id, style) => {
             return document.head.insertAdjacentElement('beforeend', $populate(
-                () => $builder('style')
+                $builder('style')
                     .id(id)
-                    .build(),
+                    .build,
                 element => element.textContent = style,
             ));
         };
 
-        return {$builder, $populate, $style};
+        return { $builder, $populate, $style };
     })();
 
     const Console = (() => {
@@ -1073,12 +1161,11 @@
     })();
 
     const Greeter = (() => {
-        const fmt = Fmt;
         const console = Console;
 
         const style = x => 'font-family: sans-serif; font-size: 16px;' + x;
         const greet = debugObject => console.info(
-            fmt.trimIndent(`
+            Fmt.trimIndent(`
                 %cHi there!
                 Thank you for using YTPA.
                 
@@ -1101,7 +1188,163 @@
         return { greet };
     })();
 
+    const Dialog = (() => {
+        const { $builder, $populate } = HtmlCreation;
+
+        const newDialog = () => {
+            /**
+             * @var {HTMLDivElement}
+             */
+            const title = $populate($builder('div').className('ytpa-dialog-title').role('heading').build);
+            /**
+             * @var {HTMLDivElement}
+             */
+            const body = $populate($builder('div').className('ytpa-dialog-body').build);
+            const build = () => $populate(
+                $builder('dialog')
+                    .className('ytpa-dialog')
+                    .build,
+                dialog => dialog.append(
+                    $populate(
+                        $builder('div').className('ytpa-dialog-head').build,
+                        head => head.append(
+                            title,
+                            $populate(
+                                $builder('form').method('dialog').build,
+                                form => form.append(
+                                    $populate(
+                                        $builder('button').className('ytpa-dialog-close-btn').build,
+                                        button => button.textContent = '×',
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                    body,
+                )
+            );
+            /**
+             * @var {HTMLDialogElement}
+             */
+            const element = build();
+            document.querySelector('ytd-app').insertAdjacentElement('beforeend', element);
+
+            return {
+                _valid: true,
+                title,
+                body,
+                element,
+                ensureValid() {
+                    if (!this._valid) throw 'One shall not re-use a removed dialog!';
+                },
+                setTitle(text) {
+                    this.title.textContent = text;
+                },
+                setContent(...elements) {
+                    this.body.textContent = '';
+                    this.body.append(...elements);
+
+                    return this;
+                },
+                show() {
+                    this.ensureValid();
+                    this.element.showModal();
+
+                    return this;
+                },
+                hide() {
+                    this.ensureValid();
+                    this.element.close();
+
+                    return this;
+                },
+                remove() {
+                    this.element.remove();
+                    this._valid = false;
+                },
+                // the fancy stuff
+                async done() {
+                    return new Promise(resolve => {
+                        // listener first to mitigate data race
+                        this.element.addEventListener('close', () => resolve());
+                        if (!this.element.open) {
+                            resolve();
+                        }
+                    })
+                },
+                /**
+                 * @param {string} title
+                 * @param {(push: (HTMLElement) => HTMLElement) => {}} run
+                 * @return {Promise}
+                 */
+                async with(title, run) {
+                    return new Promise(resolve => {
+                        /** @var {HTMLElement[]} */
+                        const elements = [];
+                        const push = element => {
+                            elements.push(element);
+
+                            return element;
+                        };
+
+                        run(push);
+                        this.setTitle(title)
+                        this.setContent(...elements);
+                        this.show();
+                        this.done().then(() => {
+                            this.hide();
+                            resolve();
+                        });
+                    });
+                },
+            };
+        }
+
+        return { newDialog };
+    })();
+
+    const Settings = (() => {
+        const uiSettingsSlug = 'ytpa-ui-setting';
+        const uiSettingsRawRetrieve = () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [];
+        const uiSettingsRawPersist = (raw = []) => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' '));
+
+        /**
+         * @param {() => string[]} pull
+         * @param {([]) => void} push
+         */
+        const settingOf = (pull, push) => ({
+            list: pull,
+            has: x => pull().includes(x),
+            add: (...x) => {
+                const settings = pull();
+                x.forEach(y => settings.includes(y) || settings.push(y));
+                push(settings);
+            },
+            remove: x => {
+                const settings = pull();
+                const index = settings.indexOf(x);
+                if (index <= -1) return;
+
+                settings.splice(index, 1);
+                push(settings);
+            },
+        });
+
+        const ui = settingOf(uiSettingsRawRetrieve, uiSettingsRawPersist);
+
+        // TODO
+        ui.add("foo", "bar");
+        ui.has("faz"); // false
+        ui.has("bar"); // true
+        ui.remove("bar");
+        ui.has("bar"); // false
+        ui.has("foo"); // true
+
+        return {};
+    })();
+
     return {
+        ControlFlow,
         Fmt,
         HtmlCreation,
         Console,
@@ -1109,9 +1352,25 @@
         AsyncOperations,
         Versioned,
         Greeter,
+        Dialog,
+        Settings,
     };
 }, () => [
     ['ytpa-height', ''],
+    ['ytpa-base', /* language=css */ `
+        html {
+            /* Keep these in mind for UI theming */
+            --ytpa-bg-base: var(--yt-spec-base-background);
+            --ytpa-bg-raised: var(--yt-spec-raised-background);
+            --ytpa-bg-menu: var(--yt-spec-menu-background);
+            --ytpa-bg-additive: var(--yt-spec-additive-background);
+            --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse);
+            --ytpa-fg-primary: var(--yt-spec-text-primary);
+            --ytpa-fg-secondary: var(--yt-spec-text-secondary);
+            --ytpa-fg-disabled: var(--yt-spec-text-disabled);
+            --ytpa-cta: var(--yt-spec-call-to-action);
+        }
+    `],
     ['ytpa-style', /* language=css */ `
         .ytpa-btn {
             border-radius: 8px;
@@ -1161,26 +1420,6 @@
         .ytpa-btn-sections > .ytpa-btn-section:nth-last-child(1 of .ytpa-btn-section) {
             border-top-right-radius: 8px;
             border-bottom-right-radius: 8px;
-        }
-
-        /* Colors were updated to meet WCAG AAA (and AA on hover)*/
-
-        .ytpa-play-all-btn {
-            background-color: #890097;
-            color: white;
-        }
-
-        .ytpa-play-all-btn:hover {
-            background-color: #b247cc;
-        }
-
-        .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > * {
-            background-color: #2053B8;
-            color: white;
-        }
-
-        .ytpa-random-btn > .ytpa-btn-section:hover, .ytpa-random-popover > *:hover {
-            background-color: #2b66da;
         }
 
         .ytpa-play-all-btn.ytpa-unsupported {
@@ -1349,6 +1588,8 @@
 
         .ytpa-random-btn-tab-fix {
             visibility: hidden;
+            height: 0;
+            width: 0;
         }
 
         .ytpa-button-container ~ .ytpa-button-container {
@@ -1360,7 +1601,127 @@
             border-radius: 100px !important;
             margin-left: 1em !important;
         }
+
+        /*
+            .ytpa-dialog
+                .ytpa-dialog-head
+                    .ytpa-dialog-title
+                    form
+                        .ytpa-dialog-close-btn
+                .ytpa-dialog-body
+        */
+
+        .ytpa-dialog {
+            border: none;
+            border-radius: 1rem;
+            background-color: var(--ytpa-bg-menu);
+            color: var(--ytpa-fg-primary);
+            font-size: 24px;
+        }
+        
+        .ytpa-dialog :is(input, button, textarea, select) {
+            background-color: var(--ytpa-bg-additive);
+        }
+        
+        .ytpa-dialog :is(input, button, select) {
+            cursor: pointer;
+        }
+        
+        .ytpa-dialog .ytpa-dialog-head {
+            display: flex;
+            gap: 2em;
+        }
+
+        .ytpa-dialog .ytpa-dialog-title {
+            flex: 1;
+            display: inline-block;
+            font-size: 1.4em;
+            border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
+            padding-bottom: 0.2em;
+            margin-bottom: 0.6em;
+        }
+        
+        .ytpa-dialog .ytpa-dialog-head form {
+            display: inline-block;
+        }
+
+        .ytpa-dialog .ytpa-dialog-close-btn {
+            border: none;
+            color: var(--ytpa-fg-primary);
+            font-weight: bold;
+            font-size: 36px;
+            width: 56px;
+            height: 56px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 0.32em;
+        }
+
+        .ytpa-dialog {
+            width: min(100% - 2rem, 80rem);
+        }
+        @media (max-width: 400px) {
+            /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
+            .ytpa-dialog {
+                width: 100vw;
+                height: 100vw;
+                border-radius: 0;
+            }
+        }
     `],
+    ['ytpa-buttons', (() => {
+        const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
+        const s = {
+            button: { classic: 'button-theme-classic', adaptive: 'button-theme-adaptive', adaptiveOutline: 'button-theme-adaptive-outline' },
+        };
+
+        /* language=css */
+        return `
+            .ytpa-play-all-btn {
+                --ytpa-playbtn-uniquecolor: #890097;
+                --ytpa-playbtn-uniquecolor-hover: #b247cc;
+                --ytpa-playbtn-text: white;
+            }
+            
+            .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
+                --ytpa-playbtn-uniquecolor: #2053b8;
+                --ytpa-playbtn-uniquecolor-hover: #2b66da;
+                --ytpa-playbtn-text: white;
+            }
+            
+            /* CLASSIC */
+            ${ifUi(s.button.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+                background-color: var(--ytpa-playbtn-uniquecolor);
+                color: var(--ytpa-playbtn-text);
+            }
+
+            ${ifUi(s.button.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *):hover {
+                background-color: var(--ytpa-playbtn-uniquecolor-hover);
+            }
+
+            /* ADAPTIVE */
+            ${ifUi(s.button.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+                background-color: var(--ytpa-bg-additive);
+                color: var(--ytpa-fg-primary);
+            }
+
+            /* ADAPTIVE OUTLINE */
+            ${ifUi(s.button.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+                background-color: var(--ytpa-bg-additive);
+                color: var(--ytpa-fg-primary);
+            }
+
+            ${ifUi(s.button.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn) {
+                --thickness: 2px;
+                --translate: -2px;
+                transform: translate(var(--translate), var(--translate));
+                box-sizing: content-box;
+                border: var(--thickness) solid var(--ytpa-playbtn-uniquecolor);
+            }
+        `;
+    })()],
 ]);
 
 /**
@@ -1388,6 +1749,8 @@
  * @property {(string) => WrappedElementBuilder} tabindex
  * @property {(string) => WrappedElementBuilder} hidden
  * @property {(string) => WrappedElementBuilder} style
+ * @property {(string) => WrappedElementBuilder} type
+ * @property {(string) => WrappedElementBuilder} method
  * @property {(string) => WrappedElementBuilder} aria_label
  * @property {(string) => WrappedElementBuilder} aria_haspopup
  * @property {(string) => WrappedElementBuilder} aria_expanded
