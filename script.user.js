@@ -1217,7 +1217,7 @@
              * @var {HTMLDivElement}
              */
             const body = $builder('div.ytpa-dialog-body').build();
-            
+
             const build = () => $builder('dialog.ytpa-dialog').onBuildAppend(
                     $builder('div.ytpa-dialog-head').onBuildAppend(
                         title,
@@ -1349,25 +1349,27 @@
     const SettingsDialogComponent = (() => {
         const { _, pass } = ControlFlow;
 
+        const getDefaultHooks = () => [hookHelp];
+
         const base = x => ({
-            _baseSettingMarker: _,
             value: ({
                 'object': x => x === null ? null : Object.values(x),
             }[typeof x] ?? pass)(x),
-            _initial: undefined,
+            initial: undefined,
+            hooked: {},
         });
 
         // no one can stop me from currying
         const W = key => x => [key, addition => ({
             ...x,
-            [`hooked_${key}`]: addition,
+            hooked: { ...x.hooked, [key]: addition },
         })];
         const hookLabel = W('label');
-        const hookHelp = W('help'); // TODO: use this on all per default? the value is nullable anyway, so "no problems"
+        const hookHelp = W('help');
 
         const S = (marker, hooks = []) => (x = null) => {
-            const result = { ...base(x), ...marker};
-            hooks.forEach(hook => {
+            const result = { ...base(x), m: marker};
+            [...getDefaultHooks(), ...hooks].forEach(hook => {
                 const [key, w] = hook(result);
                 result[`with${Fmt.ucfirst(key)}`] = w;
             });
@@ -1377,25 +1379,25 @@
 
         // asX returns a terminal object (no further DSL chaining)
         const DSL = {
-            /** @return {SettingText} */
+            /** @var {_Setting_Dsl<SettingText, []>} */
             asText: S({ text: _ }),
-            /** @return {SettingTextarea} */
+            /** @var {_Setting_Dsl<SettingTextarea, []>} */
             asTextarea: S({ textarea: _ }),
-            /** @return {SettingPassword} */
+            /** @var {_Setting_Dsl<SettingPassword, []>} */
             asPassword: S({ password: _ }),
-            /** @return {SettingNumber} */
+            /** @var {_Setting_Dsl<SettingNumber, []>} */
             asNumber: S({ number: _ }),
-            /** @return {SettingToggle} */
+            /** @var {_Setting_Dsl<SettingToggle, []>} */
             asToggle: S({ toggle: _ }, [hookLabel]),
-            /** @return {SettingOneOf} */
+            /** @var {_Setting_Dsl<SettingOneOf, [_Setting_Dsl_Param_ArrayObject]>} */
             asOneOf: S({ oneOf: _ }),
-            /** @return {SettingAnyOf} */
+            /** @var {_Setting_Dsl<SettingAnyOf, [_Setting_Dsl_Param_ArrayObject]>} */
             asAnyOf: S({ anyOf: _ }),
         };
 
         const ofInitial = x => {
             const result = Object.create(DSL)
-            result._initial = x;
+            result.initial = x;
 
             return result;
         };
@@ -1406,6 +1408,7 @@
     })();
 
     const SettingsDialog = (() => {
+        const { _ } = ControlFlow;
         const { $builder } = HtmlCreation;
         const { newDialog } = Dialog;
         const Component = SettingsDialogComponent;
@@ -1428,7 +1431,10 @@ thing,
 perhaps?
 `
                 )
-                .asTextarea(),
+                .asTextarea()
+                .withHelp(Fmt.trimIndent( `
+                    This is very important!!
+                `)),
             dummyPassword: Component
                 .ofInitial('')
                 .asPassword(),
@@ -1447,41 +1453,49 @@ perhaps?
                 .asAnyOf(['vanilla', 'chocolate', 'strawberry', 'banana']),
         };
 
+        const className = 'ytpa-settings-component';
+
         const elements = Object.entries(components).map(
             /**
              * @param {string} name
-             * @param {SettingTypes} component
+             * @param {SettingT} component
              * @param {number} i
              * @return {HTMLElement}
              */
-            ([name, component], i) => $builder('div.ytpa-settings-component-container').onBuild(
+            ([name, component], i) => $builder(`div.${className}-container`).onBuild(
                 container => {
-                    const className = 'ytpa-settings-component';
-
                     // Purescript brain demands this
-                    const init = element => component._initial !== undefined && (
-                        component.toggle
-                            ? (element.checked = !!component._initial)
-                            : (element.value = component._initial)
+                    const init = element => component.initial !== undefined && (
+                        component.m.toggle
+                            ? (element.checked = !!component.initial)
+                            : (element.value = component.initial)
                     );
                     const $b = tag => $builder(tag).name(name).className(className).data_index(i.toString());
                     const build = builder => builder.onBuild(init).build();
 
-                    container.append(
-                        (component.text && build($b('input[type="text"]')))
-                        || (component.textarea && build($b('textarea')))
-                        || (component.password && build($b('input[type="password"]')))
-                        || (component.number && build($b('input[type="number"]')))
-                        || (component.toggle && $builder('label')
-                            .className(className)
-                            .onBuildAppend(
-                                build($builder('input').type('checkbox')),
-                                component.hooked_label ?? 'Error: missing label',
-                            ).build()
+                    const has = x => x !== undefined;
+
+                    const result = (_ && false)
+                        || (has(component.m.text) && build($b('input[type="text"]')))
+                        || (has(component.m.textarea) && build($b('textarea')))
+                        || (has(component.m.password) && build($b('input[type="password"]')))
+                        || (has(component.m.number) && build($b('input[type="number"]')))
+                        || (has(component.m.toggle) && $builder('label')
+                                .className(className)
+                                .onBuildAppend(
+                                    build($builder('input').type('checkbox')),
+                                    has(component.hooked.label) || 'missing label',
+                                ).build()
                         )
                         // TODO: finish with radios and checkboxes
-                        || (component.oneOf && $b('b').onBuildText('UNIMPLEMENTED').build())
-                        || (component.anyOf && $b('b').onBuildText('UNIMPLEMENTED').build()),
+                        || (has(component.m.oneOf) && $b('b').onBuildText('UNIMPLEMENTED').build())
+                        || (has(component.m.anyOf) && $b('b').onBuildText('UNIMPLEMENTED').build());
+                    result && container.append(result);
+
+                    has(component.hooked.help) && container.append(
+                        $builder(`div.${className}-help`)
+                            .onBuildText(component.hooked.help)
+                            .build(),
                     );
                 },
             ).build(),
@@ -1951,20 +1965,50 @@ perhaps?
  * @property {(value: string) => WrappedElementBuilder} data_list
  * @property {(value: string) => WrappedElementBuilder} data_index
  */
+// BEWARE, THE BELOW JSDOC IS NOT FOR THE FAINT OF HEART
+// This is not unhinged, this isn't even overhinged, we have arrived at extrahinged.
 /**
  * @template T
  *
- * @typedef {{ _baseSettingMarker: _, value: any, _initial: any }} SettingBase
+ * @typedef {T & {[key: string]: any}} HookBag
+ */
+/**
+ * @template T
+ * @template {any[]} TParams
  *
- * @typedef {T&{ withLabel: (string) => SettingWithHookLabel<T>, hooked_label: string }} SettingWithHookLabel
+ * @typedef {(...args: TParams) => T} _Setting_Dsl
+ */
+/** @typedef {any[] | {[key: any]: any}} _Setting_Dsl_Param_ArrayObject */
+/** @typedef {SettingWithHookHelp<{}>} _Setting_DefaultHook */
+// HOOKS
+/**
+ * @template T
  *
- * @typedef {{ text: _ }&SettingBase} SettingText
- * @typedef {{ textarea: _ }&SettingBase} SettingTextarea
- * @typedef {{ password: _ }&SettingBase} SettingPassword
- * @typedef {{ number: _ }&SettingBase} SettingNumber
- * @typedef {{ toggle: _ }&SettingBase&SettingWithHookLabel} SettingToggle
- * @typedef {{ oneOf: _ }&SettingBase} SettingOneOf
- * @typedef {{ anyOf: _ }&SettingBase} SettingAnyOf
+ * @typedef {T&{ withLabel: (string) => SettingWithHookLabel<T>, hooked: HookBag & { label: string }}} SettingWithHookLabel
+ */
+/**
+ * @template T
  *
- * @typedef {SettingText|SettingTextarea|SettingPassword|SettingNumber|SettingToggle|SettingAnyOf|SettingOneOf} SettingTypes
+ * @typedef {T&{ withHelp: (string) => SettingWithHookHelp<T>, hooked: HookBag & { help: string } }} SettingWithHookHelp
+ */
+// SETTINGS
+/** @typedef {{ value: any, initial: any, m: {} } | _Setting_DefaultHook} SettingBase */
+/** @typedef {{ m: { text: _ } } & SettingBase} SettingText */
+/** @typedef {{ m: { textarea: _ } } & SettingBase} SettingTextarea */
+/** @typedef {{ m: { password: _ } } & SettingBase} SettingPassword */
+/** @typedef {{ m: { number: _ } } & SettingBase} SettingNumber */
+/** @typedef {{m: { toggle: _ }} & SettingBase | SettingWithHookLabel} SettingToggle */
+/** @typedef {{ m: { oneOf: _ } } & SettingBase} SettingOneOf */
+/** @typedef {{ m: { anyOf: _ } } & SettingBase} SettingAnyOf */
+/**
+ * @typedef {
+ *  {}
+ *  | SettingText
+ *  | SettingTextarea
+ *  | SettingPassword
+ *  | SettingNumber
+ *  | SettingToggle
+ *  | SettingAnyOf
+ *  | SettingOneOf
+ * } SettingT
  */
