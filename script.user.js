@@ -54,7 +54,7 @@
     const {
         ControlFlow: { _ },
         Fmt,
-        HtmlCreation: { $populate, $builder, $style },
+        HtmlCreation: { $builder, $style },
         Console: console,
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
@@ -235,40 +235,26 @@
         if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                $populate(
-                    $builder('a')
-                        .className('ytpa-btn ytpa-play-all-btn')
-                        .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
-                        .role('button')
-                        .build,
-                    element => element.textContent = 'Play Popular',
-                ),
+                $builder(`a.ytpa-btn.ytpa-play-all-btn[role="button"]`)
+                    .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
+                    .onBuildText('Play Popular')
+                    .build(),
             );
         } else if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                $populate(
-                    $builder('a')
-                        .className('ytpa-btn ytpa-play-all-btn')
-                        .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
-                        .role('button')
-                        .build,
-                    element => element.textContent = 'Play All',
-                ),
+                $builder('a.ytpa-btn.ytpa-play-all-btn[role="button]')
+                    .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
+                    .onBuildText('Play All')
+                    .build(),
             );
         } else {
             parent.insertAdjacentElement(
                 'beforeend',
-                $populate(
-                    $builder('a')
-                        .className('ytpa-btn ytpa-play-all-btn ytpa-unsupported')
-                        .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
-                        .role('button')
-                        .target('_blank')
-                        .rel('noreferrer')
-                        .build,
-                    element => element.textContent = 'No Playlist Found',
-                ),
+                $builder('a.ytpa-btn.ytpa-play-all-btn.ytpa-unsupported[role="button"][target="_blank"][rel="norefferer"]')
+                    .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
+                    .onBuildText('No Playlist Found')
+                    .build(),
             );
         }
 
@@ -283,70 +269,50 @@
             // Only allow random play in desktop version for now
             parent.insertAdjacentElement(
                 'beforeend',
-                $populate(
-                    $builder('span')
-                        .className('ytpa-btn ytpa-random-btn ytpa-btn-sections')
-                        .build,
-                    element => element.append(
-                        $populate(
-                            $builder('a')
-                                .className('ytpa-btn-section')
-                                .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
-                                .role('button')
-                                .build,
-                            element => element.textContent = 'Play Random',
-                        ),
-                        $populate(
-                            $builder('span')
-                                .className('ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover')
-                                .role('button')
-                                .tabindex('0')
-                                .aria_label('More options for random play')
-                                .aria_haspopup('menu')
-                                .aria_expanded('false')
-                                .build,
-                            element => element.textContent = '▾',
-                        ),
-                        $populate(
-                            $builder('span')
-                                .className('ytpa-random-btn-tab-fix')
-                                .tabindex('-1')
-                                .aria_hidden('true')
-                                .build,
-                            element => element.textContent = '▾',
-                        ),
-                    ),
-                ),
+                $builder('span.ytpa-btn.ytpa-random-btn.ytpa-btn-sections')
+                    .onBuildAppend(
+                        $builder('a.ytpa-btn-section[role="button"]')
+                            .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=random&ytpa-random-initial=1`)
+                            .onBuildText('Play Random')
+                            .build(),
+                        $builder('span')
+                            .className('ytpa-btn-section ytpa-random-more-options-btn ytpa-hover-popover')
+                            .role('button')
+                            .tabindex('0')
+                            .aria_label('More options for random play')
+                            .aria_haspopup('menu')
+                            .aria_expanded('false')
+                            .onBuildText('▾')
+                            .build(),
+                        $builder('span.ytpa-random-btn-tab-fix')
+                            .tabindex('-1')
+                            .aria_hidden('true')
+                            .onBuildText('▾')
+                            .build(),
+                    )
+                    .build(),
             );
 
             document.body.insertAdjacentElement(
                 'afterbegin',
-                $populate(
-                    $builder('div')
-                        .className('ytpa-random-popover')
-                        .role('menu')
-                        .aria_label('Random play options')
-                        .hidden('')
-                        .build,
-                    element => element.append(
-                        $populate(
-                            $builder('a')
-                                .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest`)
-                                .aria_label('Play Random prefer newest')
-                                .role('menuitem')
-                                .build,
-                            element => element.textContent = 'Prefer newest',
-                        ),
-                        $populate(
-                            $builder('a')
-                                .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1`)
-                                .aria_label('Play Random prefer oldest')
-                                .role('menuitem')
-                                .build,
-                            element => element.textContent = 'Prefer oldest',
-                        ),
-                    ),
-                ),
+                $builder('div')
+                    .className('ytpa-random-popover')
+                    .role('menu')
+                    .aria_label('Random play options')
+                    .hidden('')
+                    .onBuildAppend(
+                        $builder('a[role="menuitem"]')
+                            .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-newest`)
+                            .aria_label('Play Random prefer newest')
+                            .onBuildText('Prefer newest')
+                            .build(),
+                        $builder('a[role="menuitem"]')
+                            .href(`/playlist?list=${allPlaylist}${id}&playnext=1&ytpa-random=prefer-oldest&ytpa-random-initial=1`)
+                            .aria_label('Play Random prefer oldest')
+                            .onBuildText('Prefer oldest')
+                            .build(),
+                    )
+                    .build(),
             );
 
             const randomMoreOptionsBtn = document.querySelector('.ytpa-random-more-options-btn');
@@ -564,35 +530,25 @@
             }
 
             document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist')
-                .insertAdjacentElement('afterend', $populate(
+                .insertAdjacentElement(
+                    'afterend',
                     $builder('div')
                         .className('ytpa-playlist-emulator')
                         .data_list(list)
-                        .build,
-                    element => element.append(
-                        $populate(
+                        .onBuildAppend(
                             $builder('div')
                                 .className('title')
-                                .build,
-                            element => element.textContent = 'Playlist emulator',
-                        ),
-                        $populate(
-                            $builder('div')
-                                .className('information')
-                                .build,
-                            element => element.textContent = Fmt.trimIndent(`
+                                .onBuildText('Playlist emulator')
+                                .build(),
+                            $builder('div.information').onBuildText(Fmt.trimIndent(`
                                 It looks like YouTube is unable to handle this large playlist.
                                 Playlist emulation is a limited fallback feature of YTPA to enable you to watch even more content.
-                            `),
-                        ),
-                        $builder('div')
-                            .className('items')
-                            .build(),
-                        $builder('footer')
-                            .className('footer')
-                            .build(),
-                    )
-                ));
+                            `)).build(),
+                            $builder('div.items').build(),
+                            $builder('footer.footer').build(),
+                        )
+                        .build(),
+                );
 
             getItems(list).then(response => {
                 if (response.status === 'running') {
@@ -770,19 +726,16 @@
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
-            playlistContainer.insertAdjacentElement('afterbegin', $populate(
-                ('div').className('ytpa-random-notice').build,
-                element => element.append(
-                    document.createTextNode('This playlist is using random play.'),
-                    document.createElement('br'),
-                    document.createTextNode('The videos will '),
-                    $populate(
-                        () => document.createElement('strong'),
-                        element => element.textContent = 'not be played in the order',
-                    ),
-                    document.createTextNode(' listed here.'),
-                ),
-            ));
+            playlistContainer.insertAdjacentElement(
+                'afterbegin',
+                $builder('div.ytpa-random-notice').onBuildAppend(
+                    'This playlist is using random play.',
+                    $builder('br').build(),
+                    'The videos will ',
+                    $builder('strong').onBuildText('not play in the order').build(),
+                    ' listed here.',
+                ).build(),
+            );
 
             const storage = getStorage();
 
@@ -976,6 +929,24 @@
 
     const HtmlCreation = (() => {
         /**
+         * Safely dynamically create HTML-Elements.
+         *
+         * Creates actual DOM Elements, not plain HTML.
+         *
+         * Example:
+         *  $builder('div')
+         *      .id('foo')
+         *      .className('a b c')
+         *      .onBuildText('<b>Test</b>')
+         *      .build()
+         *
+         * Result:
+         *  ```
+         *  <div id="foo" class="a b c">
+         *      &lt;b&gt;Test&lt;/b&gt;
+         *  </div>;
+         *  ```
+         *
          * @return WrappedElementBuilder
          */
         const $builder = query => {
@@ -1046,10 +1017,6 @@
              * @return {any|HTMLElement}
              */
             const parseQuery = query => {
-                if (query.match(/\s/)) {
-                    throw 'Spaces are not allowed in $builder query.';
-                }
-
                 const match = query.match(/^[a-zA-Z0-9-]+/);
                 if (!match) {
                     throw 'Invalid tag supplied to parseQuery.';
@@ -1082,25 +1049,6 @@
             return parseQuery(query);
         };
 
-        /**
-         * insertAdjacentHtml() can open the door to XSS, so we take extra steps,
-         * even if the original values are already safe.
-         *
-         * @param {() => HTMLElement} createElement
-         * @param {(element: HTMLElement) => void} insert
-         * @param {(element: HTMLElement) => void} postprocess
-         * @return HTMLElement
-         *
-         * @deprecated Use new $builder onBuild-API instead.
-         */
-        const $populate = (createElement, insert = () => {}, postprocess = () => {}) => {
-            const element = createElement();
-            insert(element);
-            postprocess(element);
-
-            return element;
-        };
-
         const $style = (id, style) => {
             return document.head.insertAdjacentElement(
                 'beforeend',
@@ -1110,7 +1058,7 @@
             );
         };
 
-        return { $builder, $populate, $style };
+        return { $builder, $style };
     })();
 
     const Console = (() => {

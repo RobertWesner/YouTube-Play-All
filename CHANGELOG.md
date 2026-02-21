@@ -10,7 +10,7 @@ A lot of housekeeping.
 * Moved most of the boilerplate definitions into individual modules.
 * Added way too many FP patterns.
 * Created an extensible DSL for declaratively rendering the settings-dialog.
-* Extended `$builder` and deprecated `$populate`.
+* Extended `$builder` and removed `$populate` entirely.
 
 
 ## 20260220-0
