@@ -38,8 +38,7 @@
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
 // TODO: REALLY have to test all of this on mobile, been a while
-
-(async function __ytpa_root_call__(loadModules, loadStyles) {
+(G => (async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
 
     // --- setup ---
@@ -60,7 +59,8 @@
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
-        Dialog: { newDialog },
+        Settings,
+        SettingsDialog,
     } = modules;
     attachSafetyListener();
 
@@ -77,34 +77,15 @@
         console.info(`Running debug build version ${GM.info.script.version}, watch out for bugs!`);
     }
 
+    Settings._init_();
     loadStyles().forEach(([id, css]) => $style(id, css));
 
     // --- actual code ---
 
     // TODO: remove me after testing
-    unsafeWindow.__debug = () => {
-        newDialog()
-            .with('dummytitle', push => {
-                /** @var {HTMLTextAreaElement} */
-                const input = push(
-                    $populate(
-                        $builder('textarea')
-                            .build,
-                    ),
-                );
-                input.addEventListener('input', () => {
-                    output.textContent = input.value;
-                });
-
-                const output = push(
-                    $populate(
-                        $builder('pre')
-                            .build,
-                    ),
-                );
-            })
-            .then(() => console.log('that was fun!'));
-    }
+    unsafeWindow.__debug = () => SettingsDialog
+        .run()
+        .then(console.log);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -967,7 +948,9 @@
             console.error('The hole has failed us.', e);
         }
 
-        return { _ };
+        const pass = x => x;
+
+        return { _, pass };
     })();
 
     const Fmt = (() => {
@@ -983,7 +966,11 @@
             return lines.map(line => line.slice(indent)).join('\n');
         };
 
-        return { trimIndent };
+        const ucfirst = text => {
+            return String(text).charAt(0).toUpperCase() + String(text).slice(1);
+        };
+
+        return { trimIndent, ucfirst };
     })();
 
     const HtmlCreation = (() => {
@@ -1076,6 +1063,8 @@
     })();
 
     const Safety = (() => {
+        const console = Console;
+
         const handleError = e => console.error(e);
         const attachSafetyListener = () => {
             window.addEventListener('unhandledrejection', event => {
@@ -1305,8 +1294,6 @@
 
     const Settings = (() => {
         const uiSettingsSlug = 'ytpa-ui-setting';
-        const uiSettingsRawRetrieve = () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [];
-        const uiSettingsRawPersist = (raw = []) => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' '));
 
         /**
          * @param {() => string[]} pull
@@ -1330,17 +1317,188 @@
             },
         });
 
-        const ui = settingOf(uiSettingsRawRetrieve, uiSettingsRawPersist);
+        const settings = {
+            ui: settingOf(
+                () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [],
+                raw => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' ')),
+            ),
+        };
 
-        // TODO
-        ui.add("foo", "bar");
-        ui.has("faz"); // false
-        ui.has("bar"); // true
-        ui.remove("bar");
-        ui.has("bar"); // false
-        ui.has("foo"); // true
+        const _init_ = () => Object.keys(G.s).forEach(key => settings[key].add(...G.defaults[key]));
 
-        return {};
+        return {...settings, _init_};
+    })();
+
+    const SettingsDialogComponent = (() => {
+        const { _, pass } = ControlFlow;
+
+        const base = x => ({
+            _baseSettingMarker: _,
+            value: ({
+                'object': x => x === null ? null : Object.values(x),
+            }[typeof x] ?? pass)(x),
+            _initial: undefined,
+        });
+
+        // no one can stop me from currying
+        const W = key => x => [key, addition => ({
+            ...x,
+            [`hooked_${key}`]: addition,
+        })];
+        const hookLabel = W('label');
+        const hookHelp = W('help'); // TODO: use this on all per default? the value is nullable anyway, so "no problems"
+
+        const S = (marker, hooks = []) => (x = null) => {
+            const result = { ...base(x), ...marker};
+            hooks.forEach(hook => {
+                const [key, w] = hook(result);
+                result[`with${Fmt.ucfirst(key)}`] = w;
+            });
+
+            return result;
+        };
+
+        // asX returns a terminal object (no further DSL chaining)
+        const DSL = {
+            /** @return {SettingText} */
+            asText: S({ text: _ }),
+            /** @return {SettingTextarea} */
+            asTextarea: S({ textarea: _ }),
+            /** @return {SettingPassword} */
+            asPassword: S({ password: _ }),
+            /** @return {SettingNumber} */
+            asNumber: S({ number: _ }),
+            /** @return {SettingToggle} */
+            asToggle: S({ toggle: _ }, [hookLabel]),
+            /** @return {SettingOneOf} */
+            asOneOf: S({ oneOf: _ }),
+            /** @return {SettingAnyOf} */
+            asAnyOf: S({ anyOf: _ }),
+        };
+
+        const ofInitial = x => {
+            const result = Object.create(DSL)
+            result._initial = x;
+
+            return result;
+        };
+
+        return {
+            ofInitial,
+        };
+    })();
+
+    const SettingsDialog = (() => {
+        const { $builder, $populate } = HtmlCreation;
+        const { newDialog } = Dialog;
+        const Component = SettingsDialogComponent;
+
+        const components = {
+            buttonTheme: Component
+                .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come SettingsStorage
+                .asOneOf(G.s.ui.button.theme),
+            // testing things, TODO: remove
+            dummyText: Component
+                .ofInitial('Hello World!')
+                .asText(),
+            dummyTextarea: Component
+                .ofInitial(
+`
+A
+very
+long
+thing,
+perhaps?
+`
+                )
+                .asTextarea(),
+            dummyPassword: Component
+                .ofInitial('')
+                .asPassword(),
+            dummyNumber: Component
+                .ofInitial(0)
+                .asNumber(),
+            dummyToggle: Component
+                .ofInitial(false)
+                .asToggle()
+                .withLabel('Turn me on, please!'),
+            dummyOneOf: Component
+                .ofInitial('either!')
+                .asOneOf(['either!', 'or!', '(none of the above)']),
+            dummyAnyOf: Component
+                .ofInitial('strawberry')
+                .asAnyOf(['vanilla', 'chocolate', 'strawberry', 'banana']),
+        };
+
+        const elements = Object.entries(components).map(
+            /**
+             * @param {string} name
+             * @param {SettingTypes} component
+             * @param {number} i
+             * @return {HTMLElement}
+             */
+            ([name, component], i) => $populate(
+                $builder('div').className('ytpa-settings-component-container').build,
+                container => {
+                    const className = 'ytpa-settings-component';
+
+                    // Purescript brain demands this
+                    const init = element => component._initial !== undefined && (
+                        component.toggle
+                            ? (element.checked = !!component._initial)
+                            : (element.value = component._initial)
+                    );
+                    const $b = tag => $builder(tag).name(name).className(className).data_index(i.toString());
+                    const $p = builder => $populate(builder.build, init);
+
+                    container.append(
+                        (component.text && $p($b('input').type('text')))
+                        || (component.textarea && $p($b('textarea')))
+                        || (component.password && $p($b('input').type('password')))
+                        || (component.number && $p($b('input').type('number')))
+                        || (component.toggle && $populate(
+                            $builder('label').className(className).build,
+                            label => label.append(
+                                $p($builder('input').type('checkbox')),
+                                component.hooked_label ?? 'Error: missing label',
+                            ),
+                        ))
+                        // TODO: finish with radios and checkboxes
+                        || (component.oneOf && $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
+                        || (component.anyOf && $populate($b('b').build, element => element.textContent = 'UNIMPLEMENTED'))
+                    );
+                },
+            ),
+        );
+
+        const setup = push => {
+            /** @var {HTMLTextAreaElement} */
+            const input = push(
+                $populate(
+                    $builder('textarea')
+                        .build,
+                ),
+            );
+            input.addEventListener('input', () => {
+                output.textContent = input.value;
+            });
+
+            const output = push(
+                $populate(
+                    $builder('pre')
+                        .build,
+                ),
+            );
+
+            push($populate($builder('hr').build));
+            elements.forEach(push);
+        };
+
+        const run = async () => newDialog()
+                .with('YTPA Settings', setup)
+                .then(() => console.log('that was fun!'));
+
+        return { run };
     })();
 
     return {
@@ -1354,6 +1512,7 @@
         Greeter,
         Dialog,
         Settings,
+        SettingsDialog,
     };
 }, () => [
     ['ytpa-height', ''],
@@ -1672,10 +1831,9 @@
         }
     `],
     ['ytpa-buttons', (() => {
+        const s = G.s.ui;
+
         const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
-        const s = {
-            button: { classic: 'button-theme-classic', adaptive: 'button-theme-adaptive', adaptiveOutline: 'button-theme-adaptive-outline' },
-        };
 
         /* language=css */
         return `
@@ -1692,28 +1850,28 @@
             }
             
             /* CLASSIC */
-            ${ifUi(s.button.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
                 background-color: var(--ytpa-playbtn-uniquecolor);
                 color: var(--ytpa-playbtn-text);
             }
 
-            ${ifUi(s.button.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *):hover {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *):hover {
                 background-color: var(--ytpa-playbtn-uniquecolor-hover);
             }
 
             /* ADAPTIVE */
-            ${ifUi(s.button.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
 
             /* ADAPTIVE OUTLINE */
-            ${ifUi(s.button.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
 
-            ${ifUi(s.button.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn) {
                 --thickness: 2px;
                 --translate: -2px;
                 transform: translate(var(--translate), var(--translate));
@@ -1722,7 +1880,32 @@
             }
         `;
     })()],
-]);
+]))((() => {
+    // -- scriptGlobals --
+
+    // where the things live that are needed everywhere, except for the outside world
+
+    const settings = {
+        ui: {
+            button: {
+                theme: {
+                    classic: 'button-theme-classic',
+                    adaptive: 'button-theme-adaptive',
+                    adaptiveOutline: 'button-theme-adaptive-outline',
+                },
+            },
+        },
+    };
+
+    const defaults = {
+        ui: [settings.ui.button.theme.adaptiveOutline],
+    };
+
+    return {
+        s: settings,
+        defaults,
+    };
+})());
 
 /**
  * @var {{
@@ -1742,6 +1925,7 @@
  * @property {() => HTMLElement} build
  * @property {(string) => WrappedElementBuilder} id
  * @property {(string) => WrappedElementBuilder} className
+ * @property {(string) => WrappedElementBuilder} name
  * @property {(string) => WrappedElementBuilder} href
  * @property {(string) => WrappedElementBuilder} target
  * @property {(string) => WrappedElementBuilder} rel
@@ -1756,4 +1940,22 @@
  * @property {(string) => WrappedElementBuilder} aria_expanded
  * @property {(string) => WrappedElementBuilder} aria_hidden
  * @property {(string) => WrappedElementBuilder} data_list
+ * @property {(string) => WrappedElementBuilder} data_index
+ */
+/**
+ * @template T
+ *
+ * @typedef {{ _baseSettingMarker: _, value: any, _initial: any }} SettingBase
+ *
+ * @typedef {T&{ withLabel: (string) => SettingWithHookLabel<T>, hooked_label: string }} SettingWithHookLabel
+ *
+ * @typedef {{ text: _ }&SettingBase} SettingText
+ * @typedef {{ textarea: _ }&SettingBase} SettingTextarea
+ * @typedef {{ password: _ }&SettingBase} SettingPassword
+ * @typedef {{ number: _ }&SettingBase} SettingNumber
+ * @typedef {{ toggle: _ }&SettingBase&SettingWithHookLabel} SettingToggle
+ * @typedef {{ oneOf: _ }&SettingBase} SettingOneOf
+ * @typedef {{ anyOf: _ }&SettingBase} SettingAnyOf
+ *
+ * @typedef {SettingText|SettingTextarea|SettingPassword|SettingNumber|SettingToggle|SettingAnyOf|SettingOneOf} SettingTypes
  */
