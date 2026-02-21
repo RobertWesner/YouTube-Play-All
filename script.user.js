@@ -38,6 +38,7 @@
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
 // TODO: REALLY have to test all of this on mobile, been a while
+
 (G => (async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
 
@@ -59,8 +60,9 @@
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
-        Settings,
-        SettingsDialog,
+        Components,
+        ValuesDialogComponent,
+        ValuesDialog,
     } = modules;
     attachSafetyListener();
 
@@ -77,15 +79,67 @@
         console.info(`Running debug build version ${GM.info.script.version}, watch out for bugs!`);
     }
 
-    Settings._init_();
+    Components._init_();
     loadStyles().forEach(([id, css]) => $style(id, css));
 
     // --- actual code ---
 
-    // TODO: remove me after testing
-    unsafeWindow.__debug = () => SettingsDialog
-        .run()
-        .then(console.log);
+    // TODO: remove/refactor me after testing
+    const components = (() => {
+        const Component = ValuesDialogComponent;
+
+        return Component
+            .collection()
+            .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
+                .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come ComponentsStorage
+                .asOneOf({
+                    [G.s.ui.button.theme.classic]: 'Classic',
+                    [G.s.ui.button.theme.adaptive]: 'Adaptive',
+                    [G.s.ui.button.theme.adaptiveOutline]: 'Adaptive with outline',
+                }),
+            )
+            // testing things, TODO: remove
+            .set(Component.key('dummyText', 'Dummy Text'), Component
+                .ofInitial('Hello World!')
+                .asText(),
+            )
+            .set(Component.key('dummyTextarea', 'Dummy Textarea'), Component
+                .ofInitial(Fmt.trimIndent(`
+A
+very
+long
+thing,
+perhaps?
+`
+                ))
+                .asTextarea()
+                .withHelp(Fmt.trimIndent( `
+                    This is very important!!
+                `)),
+            )
+            .set(Component.key('dummyPassword', 'Dummy Password'), Component
+                .ofInitial('')
+                .asPassword(),
+            )
+            .set(Component.key('dummyNumber', 'Dummy Number'), Component
+                .ofInitial(0)
+                .asNumber(),
+            )
+            .set(Component.key('dummyToggle', 'Dummy Toggle'), Component
+                .ofInitial(false)
+                .asToggle()
+            )
+            .set(Component.key('dummyOneOf', 'Pick your poison'), Component
+                .ofInitial(-1)
+                .asOneOf({ '0': 'either!', '1': 'or!', '-1': '(none of the above)' }),
+            )
+            .set(Component.key('dummyAnyOf', 'Ice Cream Flavors'), Component
+                .ofInitial(2)
+                .asAnyOf({ 'vnll': 'vanilla', 'chclt': 'chocolate', 'strwbrr': 'strawberry', 'bnn': 'banana' }),
+            )
+        ;
+    })();
+    unsafeWindow.__debug = () => ValuesDialog.show(components).then(console.log);
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -846,6 +900,24 @@
 
     // The best part? Jetbrains-IDEs are smart enough to resolve all of this.
 
+    const Id = (() => {
+        const newUuid = () => crypto.randomUUID();
+
+        const namespace = ns => {
+            const newHtmlId = () => `ytpa-${ns}-${newUuid()}`;
+
+            return {
+                newHtmlId,
+            };
+        };
+
+        return {
+            newUuid,
+            namespace,
+            default: namespace('default'),
+        };
+    })();
+
     const ControlFlow = (() => {
         /**
          * The universal sink.
@@ -981,6 +1053,8 @@
                                 return PBO((...xs) => element.append(...xs));
                             case 'onBuildText':
                                 return PBO(x => element.textContent = x);
+                            case 'on':
+                                return P((event, handler) => element.addEventListener(event, handler));
                         }
 
                         const alwaysUseAttributes = ['hidden', 'style'];
@@ -1309,8 +1383,8 @@
         return { newDialog };
     })();
 
-    const Settings = (() => {
-        const uiSettingsSlug = 'ytpa-ui-setting';
+    const Components = (() => {
+        const uiComponentsSlug = 'ytpa-ui-setting';
 
         /**
          * @param {() => string[]} pull
@@ -1336,8 +1410,8 @@
 
         const settings = {
             ui: settingOf(
-                () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [],
-                raw => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' ')),
+                () => document.documentElement.getAttribute(uiComponentsSlug)?.split(' ') ?? [],
+                raw => document.documentElement.setAttribute(uiComponentsSlug, raw.join(' ')),
             ),
         };
 
@@ -1346,15 +1420,14 @@
         return {...settings, _init_};
     })();
 
-    const SettingsDialogComponent = (() => {
+    const ValuesDialogComponent = (() => {
         const { _, pass } = ControlFlow;
 
         const getDefaultHooks = () => [hookHelp];
 
         const base = x => ({
-            value: ({
-                'object': x => x === null ? null : Object.values(x),
-            }[typeof x] ?? pass)(x),
+            of: x,
+            value: null,
             initial: undefined,
             hooked: {},
         });
@@ -1364,7 +1437,7 @@
             ...x,
             hooked: { ...x.hooked, [key]: addition },
         })];
-        const hookLabel = W('label');
+        const hookTest = W('test');
         const hookHelp = W('help');
 
         const S = (marker, hooks = []) => (x = null) => {
@@ -1379,19 +1452,21 @@
 
         // asX returns a terminal object (no further DSL chaining)
         const DSL = {
-            /** @var {_Setting_Dsl<SettingText, []>} */
+            /** @var {_Component_Dsl<ComponentDummy, []>} */
+            asDummy: S({ dummy: _ }, [hookTest]),
+            /** @var {_Component_Dsl<ComponentText, []>} */
             asText: S({ text: _ }),
-            /** @var {_Setting_Dsl<SettingTextarea, []>} */
+            /** @var {_Component_Dsl<ComponentTextarea, []>} */
             asTextarea: S({ textarea: _ }),
-            /** @var {_Setting_Dsl<SettingPassword, []>} */
+            /** @var {_Component_Dsl<ComponentPassword, []>} */
             asPassword: S({ password: _ }),
-            /** @var {_Setting_Dsl<SettingNumber, []>} */
+            /** @var {_Component_Dsl<ComponentNumber, []>} */
             asNumber: S({ number: _ }),
-            /** @var {_Setting_Dsl<SettingToggle, []>} */
-            asToggle: S({ toggle: _ }, [hookLabel]),
-            /** @var {_Setting_Dsl<SettingOneOf, [_Setting_Dsl_Param_ArrayObject]>} */
+            /** @var {_Component_Dsl<ComponentToggle, []>} */
+            asToggle: S({ toggle: _ }),
+            /** @var {_Component_Dsl<ComponentOneOf, [_Component_Dsl_Param_ArrayObject]>} */
             asOneOf: S({ oneOf: _ }),
-            /** @var {_Setting_Dsl<SettingAnyOf, [_Setting_Dsl_Param_ArrayObject]>} */
+            /** @var {_Component_Dsl<ComponentAnyOf, [_Component_Dsl_Param_ArrayObject]>} */
             asAnyOf: S({ anyOf: _ }),
         };
 
@@ -1402,125 +1477,178 @@
             return result;
         };
 
+        const collection = () => {
+            const map = new Map();
+
+            const obj = { map };
+            obj.set = (k, v) => {
+                map.set(k, v);
+
+                return obj;
+            };
+
+            return obj;
+        };
+
+        const key = (name, displayText) => ({ name, displayText });
+
         return {
             ofInitial,
+            collection,
+            key,
         };
     })();
 
-    const SettingsDialog = (() => {
+    const ValuesDialog = (() => {
         const { _ } = ControlFlow;
         const { $builder } = HtmlCreation;
         const { newDialog } = Dialog;
-        const Component = SettingsDialogComponent;
 
-        const components = {
-            buttonTheme: Component
-                .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come SettingsStorage
-                .asOneOf(G.s.ui.button.theme),
-            // testing things, TODO: remove
-            dummyText: Component
-                .ofInitial('Hello World!')
-                .asText(),
-            dummyTextarea: Component
-                .ofInitial(
-`
-A
-very
-long
-thing,
-perhaps?
-`
-                )
-                .asTextarea()
-                .withHelp(Fmt.trimIndent( `
-                    This is very important!!
-                `)),
-            dummyPassword: Component
-                .ofInitial('')
-                .asPassword(),
-            dummyNumber: Component
-                .ofInitial(0)
-                .asNumber(),
-            dummyToggle: Component
-                .ofInitial(false)
-                .asToggle()
-                .withLabel('Turn me on, please!'),
-            dummyOneOf: Component
-                .ofInitial('either!')
-                .asOneOf(['either!', 'or!', '(none of the above)']),
-            dummyAnyOf: Component
-                .ofInitial('strawberry')
-                .asAnyOf(['vanilla', 'chocolate', 'strawberry', 'banana']),
-        };
+        const ns = 'settings-component';
+        const baseClassName = `ytpa-${ns}`;
+        const IdNamespace = Id.namespace(ns);
 
-        const className = 'ytpa-settings-component';
-
-        const elements = Object.entries(components).map(
+        /**
+         * @param {ValueDialogComponents} components
+         * @return {HTMLElement[]}
+         */
+        const createElements = components => components.map.entries().toArray().map(
             /**
              * @param {string} name
-             * @param {SettingT} component
-             * @param {number} i
+             * @param {string} displayText
+             * @param {ComponentT} component
+             * @param i
              * @return {HTMLElement}
              */
-            ([name, component], i) => $builder(`div.${className}-container`).onBuild(
+            ([{ name, displayText }, component], i) => $builder(`div.${baseClassName}-container`).onBuild(
                 container => {
+                    const id = IdNamespace.newHtmlId();
+                    const helpId = `${id}-help`;
+
                     // Purescript brain demands this
                     const init = element => component.initial !== undefined && (
                         component.m.toggle
                             ? (element.checked = !!component.initial)
                             : (element.value = component.initial)
                     );
-                    const $b = tag => $builder(tag).name(name).className(className).data_index(i.toString());
-                    const build = builder => builder.onBuild(init).build();
+                    const $b = tag => $builder(tag).className(baseClassName);
+                    const build = builder => builder
+                        .id(id)
+                        .name(name)
+                        .data_index(i.toString())
+                        .onBuild(init)
+                        .build();
 
                     const has = x => x !== undefined;
 
-                    const result = (_ && false)
-                        || (has(component.m.text) && build($b('input[type="text"]')))
-                        || (has(component.m.textarea) && build($b('textarea')))
-                        || (has(component.m.password) && build($b('input[type="password"]')))
-                        || (has(component.m.number) && build($b('input[type="number"]')))
-                        || (has(component.m.toggle) && $builder('label')
-                                .className(className)
+                    /** @var {HTMLElement|boolean} */
+                    let result = !_
+                        || (has(component.m.dummy) && build($b('div').onBuildText('Click me!').on(
+                            'click',
+                            (event) => event.target.append(component.hooked.test),
+                        )))
+                        || (has(component.m.text) && build($b('input[type="text"]').on(
+                            'input',
+                            (event) => component.value = event.target.value,
+                        )))
+                        || (has(component.m.textarea) && build($b('textarea').on(
+                            'input',
+                            (event) => component.value = event.target.value,
+                        )))
+                        || (has(component.m.password) && build($b('input[type="password"]').on(
+                            'input',
+                            (event) => component.value = event.target.value,
+                        )))
+                        || (has(component.m.number) && build($b('input[type="number"]').on(
+                            'input',
+                            (event) => component.value = event.target.value,
+                        )))
+                        // TODO: finish with radios and checkboxes
+                        || (has(component.m.oneOf) && build($b('select')
+                            .onBuildAppend(
+                                ...Object.entries(component.of).map(
+                                    ([k, v]) => {
+                                        const option = $builder('option')
+                                            .value(k)
+                                            .onBuildText(v);
+                                        if (k === component.initial) {
+                                            option.selected('');
+                                        }
+
+                                        return option.build();
+                                    }
+                                ),
+                            )
+                        ))
+                        || (has(component.m.anyOf) && build($builder('div')
+                            .id(id)
+                            .name(name)
+                            .className(`${baseClassName}-WIP`)
+                            .onBuildText('UNIMPLEMENTED')
+                            .data_index(i.toString())
+                        ));
+
+                    if (typeof result === 'object') {
+                        // wrap the stuff into a div with label
+                        result = $builder('div').onBuildAppend(
+                            $builder('label').for(id).onBuildText(displayText).build(),
+                            result,
+                        ).build();
+                    } else if (has(component.m.toggle)) {
+                        // checkboxes are built more custom
+                        result = build(
+                            $builder('label')
+                                .id(id)
+                                .name(name)
+                                .className(baseClassName)
                                 .onBuildAppend(
                                     build($builder('input').type('checkbox')),
-                                    has(component.hooked.label) || 'missing label',
-                                ).build()
-                        )
-                        // TODO: finish with radios and checkboxes
-                        || (has(component.m.oneOf) && $b('b').onBuildText('UNIMPLEMENTED').build())
-                        || (has(component.m.anyOf) && $b('b').onBuildText('UNIMPLEMENTED').build());
-                    result && container.append(result);
+                                    displayText,
+                                )
+                                .on(
+                                    'change',
+                                    (event) => component.value = event.target.checked,
+                                )
+                                .data_index(i.toString())
+                        );
+                    }
 
-                    has(component.hooked.help) && container.append(
-                        $builder(`div.${className}-help`)
-                            .onBuildText(component.hooked.help)
-                            .build(),
-                    );
+                    if (typeof result === 'boolean') {
+                        throw 'Could not build ValuesDialog component.';
+                    }
+
+                    container.append(result);
+                    if (has(component.hooked.help)) {
+                        container.append(
+                            $builder(`div`)
+                                .id(helpId)
+                                .className(`${baseClassName}-help`)
+                                .onBuildText(component.hooked.help)
+                                .build(),
+                        );
+                        result.setAttribute('aria-describedby', helpId);
+                    }
                 },
             ).build(),
         );
 
-        const setup = push => {
-            const output = push($builder('pre').build());
-            /** @var {HTMLTextAreaElement} */
-            const input = push($builder('textarea').build());
-            input.addEventListener('input', () => {
-                output.textContent = input.value;
-            });
+        /**
+         * @param {ValueDialogComponents} components
+         * @return {Promise<{ [key: string]: any }>}
+         */
+        const show = async (components) => newDialog()
+            .with('YTPA Components', push => {
+                createElements(components).forEach(push);
+            })
+            .then(() => Object.fromEntries(
+                components.map.entries().map(([k, v]) => [k.name, v.value]),
+            ));
 
-            push($builder('hr').build());
-            elements.forEach(push);
-        };
-
-        const run = async () => newDialog()
-                .with('YTPA Settings', setup)
-                .then(() => console.log('that was fun!'));
-
-        return { run };
+        return { show };
     })();
 
     return {
+        Id,
         ControlFlow,
         Fmt,
         HtmlCreation,
@@ -1530,8 +1658,9 @@ perhaps?
         Versioned,
         Greeter,
         Dialog,
-        Settings,
-        SettingsDialog,
+        Components,
+        ValuesDialogComponent,
+        ValuesDialog,
     };
 }, () => [
     ['ytpa-height', ''],
@@ -1779,75 +1908,6 @@ perhaps?
             border-radius: 100px !important;
             margin-left: 1em !important;
         }
-
-        /*
-            .ytpa-dialog
-                .ytpa-dialog-head
-                    .ytpa-dialog-title
-                    form
-                        .ytpa-dialog-close-btn
-                .ytpa-dialog-body
-        */
-
-        .ytpa-dialog {
-            border: none;
-            border-radius: 1rem;
-            background-color: var(--ytpa-bg-menu);
-            color: var(--ytpa-fg-primary);
-            font-size: 24px;
-        }
-        
-        .ytpa-dialog :is(input, button, textarea, select) {
-            background-color: var(--ytpa-bg-additive);
-        }
-        
-        .ytpa-dialog :is(input, button, select) {
-            cursor: pointer;
-        }
-        
-        .ytpa-dialog .ytpa-dialog-head {
-            display: flex;
-            gap: 2em;
-        }
-
-        .ytpa-dialog .ytpa-dialog-title {
-            flex: 1;
-            display: inline-block;
-            font-size: 1.4em;
-            border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
-            padding-bottom: 0.2em;
-            margin-bottom: 0.6em;
-        }
-        
-        .ytpa-dialog .ytpa-dialog-head form {
-            display: inline-block;
-        }
-
-        .ytpa-dialog .ytpa-dialog-close-btn {
-            border: none;
-            color: var(--ytpa-fg-primary);
-            font-weight: bold;
-            font-size: 36px;
-            width: 56px;
-            height: 56px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border-radius: 0.32em;
-        }
-
-        .ytpa-dialog {
-            width: min(100% - 2rem, 80rem);
-        }
-        @media (max-width: 400px) {
-            /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
-            .ytpa-dialog {
-                width: 100vw;
-                height: 100vw;
-                border-radius: 0;
-            }
-        }
     `],
     ['ytpa-buttons', (() => {
         const s = G.s.ui;
@@ -1899,6 +1959,109 @@ perhaps?
             }
         `;
     })()],
+    ['ytpa-dialog', /* language=css */ `
+        /*
+            .ytpa-dialog
+                .ytpa-dialog-head
+                    .ytpa-dialog-title
+                    form
+                        .ytpa-dialog-close-btn
+                .ytpa-dialog-body
+        */
+
+        .ytpa-dialog {
+            border: none;
+            border-radius: 1rem;
+            background-color: var(--ytpa-bg-menu);
+            color: var(--ytpa-fg-primary);
+            font-size: 24px;
+        }
+        
+        .ytpa-dialog :is(input, button, textarea, select) {
+            background-color: var(--ytpa-bg-additive);
+        }
+        
+        .ytpa-dialog :is(input, button, select) {
+            cursor: pointer;
+        }
+        
+        .ytpa-dialog .ytpa-dialog-head {
+            display: flex;
+            gap: 2em;
+        }
+
+        .ytpa-dialog .ytpa-dialog-title {
+            flex: 1;
+            display: inline-block;
+            font-size: 1.4em;
+            border-bottom: 1px solid color-mix(in srgb, var(--ytpa-fg-primary) 30%, transparent);
+            padding-bottom: 0.2em;
+            margin-bottom: 0.6em;
+        }
+        
+        .ytpa-dialog .ytpa-dialog-head form {
+            display: inline-block;
+        }
+
+        .ytpa-dialog .ytpa-dialog-close-btn {
+            border: none;
+            color: var(--ytpa-fg-primary);
+            font-weight: bold;
+            font-size: 36px;
+            width: 46px;
+            height: 46px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 0.32em;
+        }
+
+        .ytpa-dialog {
+            width: min(100% - 2rem, 80rem);
+        }
+        @media (max-width: 400px) {
+            /* TODO: there might be an actual world where i'd support mobile settings... maybe... not today though! */
+            .ytpa-dialog {
+                width: 100vw;
+                height: 100vw;
+                border-radius: 0;
+            }
+        }
+    `],
+    ['ytpa-settings-dialog', /* language=css */ `
+        /*
+            .ytpa-settings-component-container
+                div
+                    label
+                    .ytpa-settings-component
+                .ytpa-settings-component-help
+
+            OR
+
+            .ytpa-settings-component-container
+                label.ytpa-settings-component
+                .ytpa-settings-component-help
+        */
+
+        .ytpa-settings-component-container:not(:last-child) {
+            margin-bottom: 1em;
+        }
+
+        .ytpa-settings-component-container {
+            background-color: red; border: 2px solid darkred; /* TODO: remove */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ytpa-settings-component {
+            background-color: cyan; border: 2px solid darkcyan; /* TODO: remove */
+        }
+
+        .ytpa-settings-component-help {
+            background-color: lime; border: 2px solid green; /* TODO: remove */
+        }
+    `],
 ]))((() => {
     // -- scriptGlobals --
 
@@ -1940,11 +2103,22 @@ perhaps?
  * @var {{ userAgentData: any }&Navigator} navigator
  */
 /**
+ * @template K
+ *
+ * @typedef {
+ *  (
+ *      event: K,
+ *      handler: (event: GlobalEventHandlersEventMap[K]) => any
+ *  ) => WrappedElementBuilder
+ * } WrappedElementBuilderOnHandler
+ */
+/**
  * @typedef {Object} WrappedElementBuilder
  * @property {() => HTMLElement} build
  * @property {(fn: (element: HTMLElement) => void) => WrappedElementBuilder} onBuild
  * @property {(...append: Array<Node|string>) => WrappedElementBuilder} onBuildAppend
  * @property {(text: string) => WrappedElementBuilder} onBuildText
+ * @property {WrappedElementBuilderOnHandler<keyof GlobalEventHandlersEventMap>} on
  * @property {(value: string) => WrappedElementBuilder} id
  * @property {(value: string) => WrappedElementBuilder} className
  * @property {(value: string) => WrappedElementBuilder} addClass
@@ -1958,10 +2132,15 @@ perhaps?
  * @property {(value: string) => WrappedElementBuilder} style
  * @property {(value: string) => WrappedElementBuilder} type
  * @property {(value: string) => WrappedElementBuilder} method
+ * @property {(value: string) => WrappedElementBuilder} value
+ * @property {(value: string) => WrappedElementBuilder} checked
+ * @property {(value: string) => WrappedElementBuilder} selected
+ * @property {(value: string) => WrappedElementBuilder} for
  * @property {(value: string) => WrappedElementBuilder} aria_label
  * @property {(value: string) => WrappedElementBuilder} aria_haspopup
  * @property {(value: string) => WrappedElementBuilder} aria_expanded
  * @property {(value: string) => WrappedElementBuilder} aria_hidden
+ * @property {(value: string) => WrappedElementBuilder} aria_describedby
  * @property {(value: string) => WrappedElementBuilder} data_list
  * @property {(value: string) => WrappedElementBuilder} data_index
  */
@@ -1976,39 +2155,44 @@ perhaps?
  * @template T
  * @template {any[]} TParams
  *
- * @typedef {(...args: TParams) => T} _Setting_Dsl
+ * @typedef {(...args: TParams) => T} _Component_Dsl
  */
-/** @typedef {any[] | {[key: any]: any}} _Setting_Dsl_Param_ArrayObject */
-/** @typedef {SettingWithHookHelp<{}>} _Setting_DefaultHook */
+/** @typedef {any[] | {[key: any]: any}} _Component_Dsl_Param_ArrayObject */
+/** @typedef {ComponentWithHookHelp<{}>} _Component_DefaultHook */
 // HOOKS
 /**
  * @template T
  *
- * @typedef {T&{ withLabel: (string) => SettingWithHookLabel<T>, hooked: HookBag & { label: string }}} SettingWithHookLabel
+ * @typedef {T&{ withTest: (string) => ComponentWithHookTest<T>, hooked: hooked & { test: string }}} ComponentWithHookTest
  */
 /**
  * @template T
  *
- * @typedef {T&{ withHelp: (string) => SettingWithHookHelp<T>, hooked: HookBag & { help: string } }} SettingWithHookHelp
+ * @typedef {T&{ withHelp: (string) => ComponentWithHookHelp<T>, hooked: hooked & { help: string } }} ComponentWithHookHelp
  */
-// SETTINGS
-/** @typedef {{ value: any, initial: any, m: {} } | _Setting_DefaultHook} SettingBase */
-/** @typedef {{ m: { text: _ } } & SettingBase} SettingText */
-/** @typedef {{ m: { textarea: _ } } & SettingBase} SettingTextarea */
-/** @typedef {{ m: { password: _ } } & SettingBase} SettingPassword */
-/** @typedef {{ m: { number: _ } } & SettingBase} SettingNumber */
-/** @typedef {{m: { toggle: _ }} & SettingBase | SettingWithHookLabel} SettingToggle */
-/** @typedef {{ m: { oneOf: _ } } & SettingBase} SettingOneOf */
-/** @typedef {{ m: { anyOf: _ } } & SettingBase} SettingAnyOf */
+// VALUES
+/** @typedef {{ of: any, value: any, initial: any, m: {}, hooked: HookBag } | _Component_DefaultHook} ComponentBase */
+/** @typedef {{ m: { dummy: _ } } & ComponentBase | ComponentWithHookTest} ComponentDummy */
+/** @typedef {{ m: { text: _ } } & ComponentBase} ComponentText */
+/** @typedef {{ m: { textarea: _ } } & ComponentBase} ComponentTextarea */
+/** @typedef {{ m: { password: _ } } & ComponentBase} ComponentPassword */
+/** @typedef {{ m: { number: _ } } & ComponentBase} ComponentNumber */
+/** @typedef {{m: { toggle: _ }} & ComponentBase} ComponentToggle */
+/** @typedef {{ m: { oneOf: _ } } & ComponentBase} ComponentOneOf */
+/** @typedef {{ m: { anyOf: _ } } & ComponentBase} ComponentAnyOf */
 /**
  * @typedef {
  *  {}
- *  | SettingText
- *  | SettingTextarea
- *  | SettingPassword
- *  | SettingNumber
- *  | SettingToggle
- *  | SettingAnyOf
- *  | SettingOneOf
- * } SettingT
+ *  | ComponentDummy
+ *  | ComponentText
+ *  | ComponentTextarea
+ *  | ComponentPassword
+ *  | ComponentNumber
+ *  | ComponentToggle
+ *  | ComponentAnyOf
+ *  | ComponentOneOf
+ * } ComponentT
+ */
+/**
+ * @typedef {{ map: Map<{ name: string, displayText: string }, ComponentT> }} ValueDialogComponents
  */
