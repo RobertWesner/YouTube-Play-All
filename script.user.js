@@ -91,12 +91,18 @@
 
     attachSafetyListener();
 
-    Greeter.greet({
+    const debugInfo = {
         time: new Date().toISOString(),
         version: GM.info.script.version,
         userAgent: navigator.userAgentData || navigator.userAgent,
         language: navigator.language,
-    });
+    };
+    Greeter.greet(debugInfo);
+    document.head.append(
+        $builder('script#ytpa-debug-info[type="application/json"]')
+            .onBuildText(JSON.stringify(debugInfo, null, 2))
+            .build(),
+    );
 
     const scriptVersion = GM.info.script.version || null;
     if (scriptVersion && /-(alpha|beta|dev|test)$/.test(scriptVersion)) {
@@ -104,12 +110,6 @@
     }
 
     loadStyles().forEach(([id, css]) => $style(id, css));
-    document.addEventListener('keydown', (event) => {
-        if (window.location.pathname.endsWith('/videos') && event.ctrlKey && event.altKey && event.key.toLowerCase() === 's') {
-            event.preventDefault();
-            Debug.YTPA_tools.showSettings();
-        }
-    });
 
     if (_environment_ === 'userscript') {
         unsafeWindow.YTPA_tools = Debug.YTPA_tools;
@@ -1896,7 +1896,10 @@
             cachedSettings?.data ?? {},
             () => sync(),
         );
-        const clear = async () => GM.deleteValue(gmKey);
+        const clear = async () => {
+            await GM.deleteValue(gmKey);
+            await sync();
+        };
 
         await load();
 
@@ -1947,9 +1950,6 @@
                         
                         To open the settings via console, use:
                         YTPA_tools.showSettings();
-                        
-                        Alternatively, use the keyboard shortcut:
-                        CTRL + ALT + S
                     `))
                     .withConfirm('Are you sure you want to disable te menu button?\nYou might not be able to restore it!'),
                 )
