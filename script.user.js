@@ -122,7 +122,7 @@
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
     /**
-     * @return {{ getProgressState: () => { current: number, duration, number }, pauseVideo: () => void, seekTo: (number) => void, isLifaAdPlaying: () => boolean }} player
+     * @return {{ getProgressState: () => { current: number, duration: number }, pauseVideo: () => void, seekTo: (number) => void }}
      */
     const getPlayer = () => document.querySelector('#movie_player');
 
@@ -252,7 +252,7 @@
         } else if (!document.querySelector('.ytpa-btn-spacer')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                $builder('spanr.ytpa-btn-spacer').build(),
+                $builder('span.ytpa-btn-spacer').build(),
             );
         }
 
