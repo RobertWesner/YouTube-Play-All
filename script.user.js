@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         development
+// @version         20260222-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -2560,7 +2560,7 @@
         `],
         ['ytpa-spacer', /* language=css */ `
             html {
-                --ytpa-btn-spacer-neigbor-margin-left: 0;
+                --ytpa-btn-spacer-neigbor-margin-left: 0.2em;
             }
             
             ${ifUi(s.spacer.show)} {
