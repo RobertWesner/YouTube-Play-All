@@ -14,7 +14,10 @@ setUpJS script page =
 setUpUserscript :: T.Page -> Aff Unit
 setUpUserscript page = do
     src <- readTextFile UTF8 "../script.user.js"
-    setUpJS "window.GM = { info: { script: { version: '21110101-0-test' } } };" page
+    -- TODO: possibly look for a more reliable fix
+    setUpJS "if (window.hasOwnProperty('trustedTypes') && !window.trustedTypes.defaultPolicy) {window.trustedTypes.createPolicy('default', { createHTML: string => string, createScript: s => s, createScriptURL: s => s, });}" page
+    setUpJS "window.unsafeWindow = window" page
+    setUpJS "window.GM = { info: { script: { version: '21110101-0-test' } }, getValue: () => ({}) };" page
     setUpJS src page
 
 waitForAndClick :: String -> T.Page -> Aff Unit
