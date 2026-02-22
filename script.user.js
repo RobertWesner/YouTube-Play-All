@@ -1899,6 +1899,7 @@
         const clear = async () => {
             await GM.deleteValue(gmKey);
             await sync();
+            window.location.reload();
         };
 
         await load();
