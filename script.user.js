@@ -47,6 +47,10 @@
     'use strict';
 
     // --- setup ---
+    
+    if (typeof _environment_ === 'undefined' || !_environment_) {
+        window._environment_ = 'userscript';
+    }
 
     const verifyModule = ([name, mod]) => {
         if (typeof mod === 'function') {
@@ -87,7 +91,6 @@
 
     attachSafetyListener();
 
-    console.info(`You are using version ${GM.info.script.version} of YTPA!`);
     Greeter.greet({
         time: new Date().toISOString(),
         version: GM.info.script.version,
@@ -101,13 +104,18 @@
     }
 
     loadStyles().forEach(([id, css]) => $style(id, css));
-    unsafeWindow.YTPA_tools = Debug.YTPA_tools;
     document.addEventListener('keydown', (event) => {
         if (window.location.pathname.endsWith('/videos') && event.ctrlKey && event.altKey && event.key.toLowerCase() === 's') {
             event.preventDefault();
             Debug.YTPA_tools.showSettings();
         }
     });
+
+    if (_environment_ === 'userscript') {
+        unsafeWindow.YTPA_tools = Debug.YTPA_tools;
+    } else if (_environment_ === 'extension') {
+        globalThis.__YTPA_CONSOLE_API__ = Debug.YTPA_tools;
+    }
 
     // --- actual code ---
 
@@ -2461,6 +2469,11 @@
                 padding: 0.24em;
                 font-size: 16px;
             }
+            
+            .ytpa-dialog-component-container select option {
+                color: var(--ytpa-fg-primary);
+                background-color: var(--ytpa-bg-additive-heavy);
+            }
 
             .ytpa-dialog-component-container textarea {
                 min-width: 50%;
@@ -2605,6 +2618,12 @@
     };
 })());
 
+/**
+ * @var {'userscript'|'extension'} _environment_
+ */
+/**
+ * @var {{}} globalThis
+ */
 /**
  * @var {{}} unsafeWindow
  */
