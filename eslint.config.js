@@ -17,8 +17,8 @@ export default defineConfig([
             globals: {
                 ...globals.browser,
                 GM: 'readonly',
-                GM_xmlhttpRequest: 'readonly',
-                GM_info: 'readonly',
+                _environment_: 'readonly',
+                unsafeWindow: 'readonly',
             },
         },
         linterOptions: {
