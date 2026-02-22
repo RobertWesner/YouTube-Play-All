@@ -1,5 +1,18 @@
 # YTPA Changelog
 
+## 20260222-0
+
+A lot of housekeeping, many internal refactors.
+Implemented new UI and settings capabilities.
+
+* Refactored [script.user.js](./script.user.js) to have a custom-made single-file module system.
+* Moved most of the boilerplate definitions into individual modules.
+* Added way too many FP patterns.
+* Created an extensible DSL for declaratively rendering the settings-dialog.
+* Extended `$builder` and removed `$populate` entirely.
+* Added button theming, spacer, and settings dialog.
+
+
 ## 20260220-0
 
 Strong progress towards improvements for future testing.
@@ -9,6 +22,7 @@ Additional fixes for the new UI for channels with members-only content.
 * Refactored initial testing to `Run.Test.All` module.
 * Added `Run.Playground.Ui.V20260219` module to testing harness.
 * [#56](https://github.com/RobertWesner/YouTube-Play-All/issues/56) Added compatibility to the new members-only UI.
+
 
 ## 20260208-0
 

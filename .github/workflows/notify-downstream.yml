@@ -1,0 +1,23 @@
+name: Notify downstream
+on:
+    release:
+        types: [published]
+
+jobs:
+    trigger:
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: tibdex/github-app-token@v2
+                id: app-token
+                with:
+                    app_id: ${{ secrets.APP_ID }}
+                    private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+            -   name: Trigger repo B workflow
+                env:
+                    GH_TOKEN: ${{ steps.app-token.outputs.token }}
+                run: |
+                    gh workflow run release-from-upstream.yml \
+                        -R OWNER/REPO_B \
+                        -f tag='${{ github.event.release.tag_name }}' \
+                        -f source_repo='${{ github.repository }}'
