@@ -61,9 +61,9 @@
      *
      * @param {N} name
      * @param {M} modules
-     * @return {Promise<M[N]>}
+     * @return {M[N]}
      */
-    const awaitAsyncModule = async (name, modules) => {
+    const asyncModule = async (name, modules) => {
         const module = modules[name];
         verifyModule([name, module]);
 
@@ -80,10 +80,10 @@
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
-        SettingsDialog,
         Debug,
     } = syncModules;
-    const SettingsStorage = awaitAsyncModule('SettingsStorage', asyncModules);
+    const SettingsStorage = await asyncModule('SettingsStorage', asyncModules);
+    const SettingsDialog = await asyncModule('SettingsDialog', asyncModules);
 
     attachSafetyListener();
 
@@ -102,6 +102,12 @@
 
     loadStyles().forEach(([id, css]) => $style(id, css));
     unsafeWindow.YTPA_tools = Debug.YTPA_tools;
+    document.addEventListener('keydown', (event) => {
+        if (window.location.pathname.endsWith('/videos') && event.ctrlKey && event.altKey && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            Debug.YTPA_tools.showSettings();
+        }
+    });
 
     // --- actual code ---
 
@@ -908,8 +914,6 @@
 
         // https://stackoverflow.com/a/48218209
         const merge = (...objects) => {
-            const isObject = obj => obj && typeof obj === 'object';
-
             return objects.reduce((prev, obj) => {
                 Object.keys(obj).forEach(key => {
                     const pVal = prev[key];
@@ -930,8 +934,38 @@
             }, {});
         };
 
+        const watch = (rootObject, notify) => {
+            const cache = new WeakMap();
+
+            const proxify = (object) => {
+                if (!isObject(object)) return object;
+
+                const existing = cache.get(object);
+                if (existing) return existing;
+
+                const handler = {
+                    get(target, prop, receiver) {
+                        return proxify(Reflect.get(target, prop, receiver));
+                    },
+                    set(target, prop, value, receiver) {
+                        value = proxify(value);
+                        const ok = Reflect.set(target, prop, value, receiver);
+                        if (ok) notify();
+
+                        return ok;
+                    },
+                };
+
+                return new Proxy(object, handler);
+            };
+
+            return proxify(rootObject);
+        };
+
         return {
+            isObject,
             merge,
+            watch,
         };
     })()
 
@@ -1420,7 +1454,7 @@
     const ValuesDialogComponent = (() => {
         const { _ } = ControlFlow;
 
-        const getDefaultHooks = () => [hookHelp];
+        const getDefaultHooks = () => [hookHelp, hookConfirm];
 
         const base = x => ({
             of: x,
@@ -1428,12 +1462,14 @@
         });
 
         // no one can stop me from currying
-        const W = key => x => [key, addition => ({
-            ...x,
-            hooked: { ...x.hooked, [key]: addition },
-        })];
-        const hookTest = W('test');
-        const hookHelp = W('help');
+        const H = key => x => [key, addition => {
+            x.hooked[key] = addition;
+
+            return x;
+        }];
+        const hookTest = H('test');
+        const hookHelp = H('help');
+        const hookConfirm = H('confirm');
 
         const S = (t, marker, hooks = []) => (x = null) => {
             const result = { ...base(x), m: marker};
@@ -1452,36 +1488,42 @@
              * @return {ComponentDummy}
              */
             asDummy() {
+                // noinspection JSValidateTypes
                 return S(this, { dummy: _ }, [hookTest])();
             },
             /**
              * @return {ComponentText}
              */
             asText() {
+                // noinspection JSValidateTypes
                 return S(this, { text: _ })();
             },
             /**
              * @return {ComponentTextarea}
              */
             asTextarea() {
+                // noinspection JSValidateTypes
                 return S(this, { textarea: _ })();
             },
             /**
-             * @return {ComponentTextarea}
+             * @return {ComponentPassword}
              */
             asPassword() {
+                // noinspection JSValidateTypes
                 return S(this, { password: _ })();
             },
             /**
-             * @return {ComponentTextarea}
+             * @return {ComponentNumber}
              */
             asNumber() {
+                // noinspection JSValidateTypes
                 return S(this, { number: _ })();
             },
             /**
-             * @return {ComponentTextarea}
+             * @return {ComponentToggle}
              */
             asToggle() {
+                // noinspection JSValidateTypes
                 return S(this, { toggle: _ })();
             },
             /**
@@ -1489,6 +1531,7 @@
              * @return {ComponentOneOf}
              */
             asOneOf(...xs) {
+                // noinspection JSValidateTypes
                 return S(this, { oneOf: _ })(...xs);
             },
             /**
@@ -1496,6 +1539,7 @@
              * @return {ComponentAnyOf}
              */
             asAnyOf(...xs) {
+                // noinspection JSValidateTypes
                 return S(this, { anyOf: _ })(...xs);
             },
         };
@@ -1592,7 +1636,6 @@
                             'input',
                             (event) => component.value = event.target.value,
                         )))
-                        // TODO: finish with radios and checkboxes
                         || (has(component.m.oneOf) && build($b('select')
                             .on(
                                 'change',
@@ -1604,7 +1647,7 @@
                                         const option = $builder('option')
                                             .value(k)
                                             .onBuildText(v);
-                                        if (k === component.initial) {
+                                        if (k === component.value) {
                                             option.selected('');
                                         }
 
@@ -1613,6 +1656,7 @@
                                 ),
                             )
                         ))
+                        // TODO: finish with multiple choice checkboxes!
                         || (has(component.m.anyOf) && build($builder('div')
                             .id(id)
                             .name(name)
@@ -1635,12 +1679,32 @@
                                 .name(name)
                                 .className(baseClassName)
                                 .onBuildAppend(
-                                    build($builder('input').type('checkbox')),
-                                    displayText,
+                                    $builder('div.switch')
+                                        .onBuildAppend(
+                                            build($builder('input[type="checkbox"]')),
+                                            $builder('span.slider').aria_hidden('true').build(),
+                                        )
+                                        .build(),
+                                    $builder('div.text')
+                                        .onBuildText(displayText)
+                                        .build(),
                                 )
                                 .on(
                                     'change',
-                                    (event) => component.value = event.target.checked,
+                                    (event) => {
+                                        if (
+                                            !event.target.checked
+                                            && component.hooked.confirm
+                                            && (!confirm(component.hooked.confirm))
+                                        ) {
+                                            event.preventDefault();
+                                            event.target.checked = true;
+
+                                            return;
+                                        }
+
+                                        component.value = event.target.checked;
+                                    },
                                 )
                                 .data_index(i.toString())
                         );
@@ -1682,6 +1746,7 @@
 
     // solves the slight "circular" dependency with a promise
     let setSettingsStorage = () => { throw 'Premature call to setSettingsStorage.' };
+    /** @type {Promise<SettingsStorage>} */
     const settingsStoragePromise = new Promise(resolve => setSettingsStorage = resolve);
 
     const SettingsHandlers = (() => {
@@ -1690,9 +1755,9 @@
         /**
          * @param {() => string[]} pull
          * @param {([]) => void} push
+         * @param {() => void} clear
          */
-        const settingOf = (pull, push) => ({
-            list: pull,
+        const settingOf = (pull, push, clear) => ({
             has: x => pull().includes(x),
             add: (...x) => {
                 const settings = pull();
@@ -1707,32 +1772,35 @@
                 settings.splice(index, 1);
                 push(settings);
             },
+            clear,
         });
 
         const settings = {
             ui: settingOf(
                 () => document.documentElement.getAttribute(uiSettingsSlug)?.split(' ') ?? [],
                 raw => document.documentElement.setAttribute(uiSettingsSlug, raw.join(' ')),
+                () => document.documentElement.setAttribute(uiSettingsSlug, ''),
             ),
         };
 
         /**
          * @param {{ [key: string]: [string] }} loadedSettings
          */
-        const init = loadedSettings => Object.keys(loadedSettings)
-            .forEach(key => settings[key].add(...loadedSettings[key].filter(x => !!x)));
+        const update = loadedSettings => Object.keys(loadedSettings)
+            .forEach(key => {
+                settings[key].clear();
+                settings[key].add(...loadedSettings[key].filter(x => !!x));
+            });
 
         // This is how we translate storage data into settings.
-
-        settingsStoragePromise.then(
+        const updateByStorageData = async () => settingsStoragePromise.then(
             /**
-             * @param {{ get: () => SettingsData }} storage
+             * @param {{ data: () => SettingsData }} storage
              */
             storage => {
-                Console.log(storage, storage.get())
-                const { general } = storage.get();
+                const { general } = storage.data();
 
-                init({
+                update({
                     ui: [
                         general.ui.buttonTheme,
                         general.ui.spacerVisible
@@ -1743,8 +1811,9 @@
                 });
             },
         );
+        updateByStorageData().then();
 
-        return { ...settings };
+        return { updateByStorageData };
     })();
 
     const SettingsStorage = (async () => {
@@ -1815,89 +1884,89 @@
         /**
          * @return {SettingsData|{}}
          */
-        const get = () => cachedSettings?.data ?? {};
-        const set = async (key, value) => {
-            cachedSettings.data[key] = value;
-            await sync();
-        };
+        const data = () => Obj.watch(
+            cachedSettings?.data ?? {},
+            () => sync(),
+        );
         const clear = async () => GM.deleteValue(gmKey);
 
         await load();
 
+        /**
+         * @typedef {{
+         *  get: () => SettingsData,
+         *  set: (k: string, v: any) => Promise,
+         *  clear: () => Promise,
+         * }} SettingsStorage
+         */
         const exports = {
-            get,
-            set,
+            data,
             clear,
-            sync,
         };
         setSettingsStorage(exports);
 
         return exports;
     })();
 
-    const SettingsDialog = (() => {
-        // TODO: refactor me after testing
+    const SettingsDialog = (async () => {
+        const console = Console;
+        /** @var {SettingsData} */
+        const data = (await settingsStoragePromise).data();
+
         const components = (() => {
             const Component = ValuesDialogComponent;
 
             return Component
                 .collection()
-                .set(Component.key('dumdum', 'Hmm'), Component
-                    .ofInitial('A')
-                    .asDummy()
-                    .withTest('funky demo value'),
-                )
                 .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
-                    .ofInitial(G.s.ui.button.theme.adaptiveOutline) // TODO: this should be loaded from the soon to come SettingsStorage (remember to build it capable of migrating versions, absolute overkill but nice)
+                    .ofInitial(data.general.ui.buttonTheme)
                     .asOneOf({
                         [G.s.ui.button.theme.classic]: 'Classic',
                         [G.s.ui.button.theme.adaptive]: 'Adaptive',
                         [G.s.ui.button.theme.adaptiveOutline]: 'Adaptive with outline',
                     }),
                 )
-                // testing things, TODO: remove
-                .set(Component.key('dummyText', 'Dummy Text'), Component
-                    .ofInitial('Hello World!')
-                    .asText(),
+                .set(Component.key('spacerVisible', 'Show spacer before buttons'), Component
+                    .ofInitial(data.general.ui.spacerVisible)
+                    .asToggle(),
                 )
-                .set(Component.key('dummyTextarea', 'Dummy Textarea'), Component
-                    .ofInitial(Fmt.trimIndent(`
-                    A
-                    very
-                    long
-                    thing,
-                    perhaps?
-                `))
-                    .asTextarea()
-                    .withHelp(Fmt.trimIndent( `
-                    This is very important!!
-                `)),
-                )
-                .set(Component.key('dummyPassword', 'Dummy Password'), Component
-                    .ofInitial('')
-                    .asPassword(),
-                )
-                .set(Component.key('dummyNumber', 'Dummy Number'), Component
-                    .ofInitial(0)
-                    .asNumber(),
-                )
-                .set(Component.key('dummyToggle', 'Dummy Toggle'), Component
-                    .ofInitial(false)
+                .set(Component.key('settingsButtonVisible', 'Show settings button'), Component
+                    .ofInitial(data.general.ui.settingsButtonVisible)
                     .asToggle()
-                )
-                .set(Component.key('dummyOneOf', 'Pick your poison'), Component
-                    .ofInitial(-1)
-                    .asOneOf({ '0': 'either!', '1': 'or!', '-1': '(none of the above)' }),
-                )
-                .set(Component.key('dummyAnyOf', 'Ice Cream Flavors'), Component
-                    .ofInitial(2)
-                    .asAnyOf({ 'vnll': 'vanilla', 'chclt': 'chocolate', 'strwbrr': 'strawberry', 'bnn': 'banana' }),
+                    .withHelp(Fmt.trimIndent(`
+                        Disabling this setting may prevent you from opening this window!
+                        Do not disable if you are unable to open the browser console.
+                        
+                        To open the settings via console, use:
+                        YTPA_tools.showSettings();
+                        
+                        Alternatively, use the keyboard shortcut:
+                        CTRL + ALT + S
+                    `))
+                    .withConfirm('Are you sure you want to disable te menu button?\nYou might not be able to restore it!'),
                 )
             ;
         })();
 
         const show = () => {
-            ValuesDialog.show(components).then(x => console.log(x));
+            ValuesDialog.show(components).then(values => {
+                const {
+                    buttonTheme,
+                    spacerVisible,
+                    settingsButtonVisible,
+                } = values;
+
+                if (Object.values(G.s.ui.button.theme).includes(buttonTheme)) {
+                    data.general.ui.buttonTheme = buttonTheme;
+                } else {
+                    console.error(`Invalid button theme ${buttonTheme}.`);
+                }
+
+                data.general.ui.spacerVisible = spacerVisible;
+                data.general.ui.settingsButtonVisible = settingsButtonVisible;
+
+                SettingsHandlers.updateByStorageData();
+            });
         };
 
         return {
@@ -1908,9 +1977,11 @@
     const Debug = (() => {
         const YTPA_tools = {
             storage: () => { throw 'Storage not loaded.'; },
+            showSettings: () => { throw 'Settings not ready.'; },
         };
 
         settingsStoragePromise.then(storage => YTPA_tools.storage = storage);
+        SettingsDialog.then(dialog => YTPA_tools.showSettings = dialog.show);
 
         return {
             YTPA_tools,
@@ -1932,10 +2003,10 @@
         ValuesDialogComponent,
         ValuesDialog,
         SettingsHandlers,
-        SettingsDialog,
         Debug
     }, {
         SettingsStorage,
+        SettingsDialog,
     }];
 }, () => {
     const s = G.s.ui;
@@ -2248,8 +2319,8 @@
 
             /* ADAPTIVE */
             ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
-                background-color: var(--ytpa-bg-additive);
-                color: var(--ytpa-fg-primary);
+                background-color: var(--ytpa-bg-additive) !important;
+                color: var(--ytpa-fg-primary) !important;
             }
 
             /* ADAPTIVE OUTLINE */
@@ -2357,13 +2428,17 @@
     
                 .ytpa-dialog-component-container
                     label.ytpa-dialog-component
+                        div.switch
+                            input[type="checkbox"]
+                            span.slider
+                        div.text
                     .ytpa-dialog-component-help
             */
-    
+
             .ytpa-dialog-component-container:not(:last-child) {
                 margin-bottom: 1em;
             }
-    
+
             .ytpa-dialog-component-container > div:has(
                 input:is([type="text"], [type="password"], [type="number"]),
                 textarea,
@@ -2373,7 +2448,7 @@
                 margin-bottom: 0.2em;
                 font-size: 18px;
             }
-    
+
             .ytpa-dialog-component-container :is(
                 input:is([type="text"], [type="password"], [type="number"]),
                 textarea,
@@ -2386,21 +2461,18 @@
                 padding: 0.24em;
                 font-size: 16px;
             }
-    
+
             .ytpa-dialog-component-container textarea {
                 min-width: 50%;
                 min-height: 72px;
                 max-width: 100%;
             }
-    
+
             .ytpa-dialog-component-container {
                 display: flex;
                 flex-direction: column;
             }
-    
-            .ytpa-dialog-component {
-            }
-    
+
             .ytpa-dialog-component-help {
                 background-color: var(--ytpa-bg-additive-inverse-heavy);
                 border: 2px solid var(--ytpa-bg-additive-heavy);
@@ -2409,6 +2481,67 @@
                 white-space: pre;
                 margin-top: 0.32em;
                 font-size: 18px;
+            }
+
+            label.ytpa-dialog-component:has(.switch) {
+                display: flex;
+            }
+
+            label.ytpa-dialog-component:has(.switch) .text {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                margin-left: 1rem;
+            }
+
+            .ytpa-dialog-component .switch {
+                display: inline-flex;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .ytpa-dialog-component .switch input {
+                position: absolute;
+                opacity: 0;
+                width: 1px;
+                height: 1px;
+            }
+
+            .ytpa-dialog-component .switch .slider {
+                width: 46px;
+                height: 24px;
+                border-radius: 999px;
+                background: #a1a1a1;
+                position: relative;
+                transition: background .2s ease;
+                flex: 0 0 auto;
+            }
+
+            .ytpa-dialog-component .switch .slider::before {
+                content: "";
+                position: absolute;
+                top: 4px;
+                left: 4px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: white;
+                transition: transform .2s ease;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, .2);
+            }
+
+            .ytpa-dialog-component .switch input:checked + .slider {
+                background: #4caf50;
+            }
+
+            .ytpa-dialog-component .switch input:checked + .slider::before {
+                transform: translateX(22px);
+            }
+
+            .ytpa-dialog-component .switch input:focus-visible + .slider {
+                outline: 3px solid var(--ytpa-bg-additive-heavy);
+                outline-offset: 2px;
             }
         `],
         ['ytpa-spacer', /* language=css */ `
@@ -2537,11 +2670,7 @@
  */
 // BEWARE, THE BELOW JSDOC IS NOT FOR THE FAINT OF HEART
 // This is not unhinged, this isn't even overhinged, we have arrived at extrahinged.
-/**
- * @template T
- *
- * @typedef {T & {[key: string]: any}} HookBag
- */
+/** @typedef {Record<string, any>} HookBag */
 /**
  * @template T
  * @template {any[]} TParams
@@ -2549,28 +2678,41 @@
  * @typedef {(...args: TParams) => T} _Component_Dsl
  */
 /** @typedef {any[] | {[key: any]: any}} _Component_Dsl_Param_ArrayObject */
-/** @typedef {ComponentWithHookHelp<{}>} _Component_DefaultHook */
+/**
+ * @template T
+ *
+ * @typedef {ComponentWithHookHelp<T> | ComponentWithHookConfirm<T>} Hooks
+ */
 // HOOKS
 /**
  * @template T
  *
- * @typedef {T&{ withTest: (string) => ComponentWithHookTest<T>, hooked: hooked & { test: string }}} ComponentWithHookTest
+ * @typedef {{ withTest: (test: string) => T, hooked: { test: string }}} ComponentWithHookTest
  */
 /**
  * @template T
  *
- * @typedef {T&{ withHelp: (string) => ComponentWithHookHelp<T>, hooked: hooked & { help: string } }} ComponentWithHookHelp
+ * @typedef {{ withHelp: (help: string) => T, hooked: { help: string } }} ComponentWithHookHelp
+ */
+/**
+ * @template T
+ *
+ * @typedef {{ withConfirm: (confirm: string) => T, hooked: { confirm: string } }} ComponentWithHookConfirm
  */
 // VALUES
-/** @typedef {{ of: any, value: any, value: any, m: {}, hooked: HookBag } | _Component_DefaultHook} ComponentBase */
-/** @typedef {{ m: { dummy: _ } } & ComponentBase | ComponentWithHookTest} ComponentDummy */
-/** @typedef {{ m: { text: _ } } & ComponentBase} ComponentText */
-/** @typedef {{ m: { textarea: _ } } & ComponentBase} ComponentTextarea */
-/** @typedef {{ m: { password: _ } } & ComponentBase} ComponentPassword */
-/** @typedef {{ m: { number: _ } } & ComponentBase} ComponentNumber */
-/** @typedef {{m: { toggle: _ }} & ComponentBase} ComponentToggle */
-/** @typedef {{ m: { oneOf: _ } } & ComponentBase} ComponentOneOf */
-/** @typedef {{ m: { anyOf: _ } } & ComponentBase} ComponentAnyOf */
+/**
+ * @template {string} M
+ *
+ * @typedef {{ of: any, value: any, value: any, m: Record<M, any>, hooked: HookBag }} ComponentBase
+ */
+/** @typedef {ComponentBase<'dummy'> & Hooks<ComponentDummy>} ComponentDummy */
+/** @typedef {ComponentBase<'text'> & Hooks<ComponentText>} ComponentText */
+/** @typedef {ComponentBase<'textarea'> & Hooks<ComponentTextarea>} ComponentTextarea */
+/** @typedef {ComponentBase<'password'> & Hooks<ComponentPassword>} ComponentPassword */
+/** @typedef {ComponentBase<'number'> & Hooks<ComponentNumber>} ComponentNumber */
+/** @typedef {ComponentBase<'toggle'> & Hooks<ComponentToggle>} ComponentToggle */
+/** @typedef {ComponentBase<'oneOf'> & Hooks<ComponentOneOf>} ComponentOneOf */
+/** @typedef {ComponentBase<'anyOf'> & Hooks<ComponentAnyOf>} ComponentAnyOf */
 /**
  * @typedef {
  *  {}
