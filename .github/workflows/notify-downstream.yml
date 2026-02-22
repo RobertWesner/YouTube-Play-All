@@ -15,7 +15,7 @@ jobs:
 
             -   name: Trigger repo B workflow
                 env:
-                    GH_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+                    GH_TOKEN: ${{ steps.app-token.outputs.token }}
                 run: |
                     gh workflow run release-from-upstream.yml \
                         -R OWNER/REPO_B \
