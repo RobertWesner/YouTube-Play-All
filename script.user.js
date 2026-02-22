@@ -280,7 +280,7 @@
         } else if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
-                $builder('a.ytpa-btn.ytpa-play-all-btn[role="button]')
+                $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
                     .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
                     .onBuildText('Play All')
                     .build(),
@@ -288,7 +288,7 @@
         } else {
             parent.insertAdjacentElement(
                 'beforeend',
-                $builder('a.ytpa-btn.ytpa-play-all-btn.ytpa-unsupported[role="button"][target="_blank"][rel="norefferer"]')
+                $builder('a.ytpa-btn.ytpa-play-all-btn.ytpa-unsupported[role="button"][target="_blank"][rel="noreferrer"]')
                     .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
                     .onBuildText('No Playlist Found')
                     .build(),
@@ -726,7 +726,7 @@
                     break;
                 case 'prefer-oldest':
                     // Select between oldest 20 videos
-                    videoIndex = videos.length - Math.floor(Math.random() * preferenceRange);
+                    videoIndex = Math.max(0, videos.length - 1 - Math.floor(Math.random() * preferenceRange));
 
                     break;
                 default:
