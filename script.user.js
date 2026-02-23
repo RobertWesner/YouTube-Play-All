@@ -79,11 +79,13 @@
     const {
         ControlFlow: { _ },
         Fmt,
+        Icons,
         HtmlCreation: { $builder, $style },
         Console: console,
         Safety: { handleError, attachSafetyListener, safeTimeout, safeInterval, safeEventListener },
         Versioned,
         Greeter,
+        Reset,
         Debug,
     } = syncModules;
     const SettingsStorage = await asyncModule('SettingsStorage', asyncModules);
@@ -116,6 +118,8 @@
     } else if (_environment_ === 'extension') {
         globalThis.__YTPA_CONSOLE_API__ = Debug.YTPA_tools;
     }
+
+    const settingsData = SettingsStorage.data();
 
     // --- actual code ---
 
@@ -257,32 +261,59 @@
         }
 
         // See: available-lists.md
-        const [allPlaylist, popularPlaylist] = window.location.pathname.endsWith('/videos')
-            // Normal videos
-            // list=UULP has the all videos sorted by popular
-            // list=UU<ID> adds shorts into the playlist, list=UULF<ID> has videos without shorts
-            ? ['UULF', 'UULP']
-            // Shorts
-            : window.location.pathname.endsWith('/shorts')
-                ? ['UUSH', 'UUPS']
-                // Live streams
-                : ['UULV', 'UUPV'];
+        const [[allPlaylist, popularPlaylist], [allText, popularText]] = (() => {
+            const verb = settingsData.general.features.showPlaylistInsteadOfPlaying
+                ? 'View'
+                : 'Play';
+            const defaultText = [`${verb} All`, `${verb} Popular`];
+            const match = window.location.pathname.match(/^\/[^\/]+\/(.+)/);
 
-        // Check if popular videos are displayed
-        if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
-            parent.insertAdjacentElement(
-                'beforeend',
-                $builder(`a.ytpa-btn.ytpa-play-all-btn[role="button"]`)
-                    .href(`/playlist?list=${popularPlaylist}${id}&playnext=1`)
-                    .onBuildText('Play Popular')
-                    .build(),
-            );
-        } else if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
+            if (!match) {
+                throw 'Trying to access play all outside of channel content tabs.';
+            }
+
+            switch (match[1]) {
+                case 'videos':
+                    if (settingsData.general.features.playEverythingInsteadOfVideos) {
+                        return [['UU', null], [`${verb} All Content`, defaultText[1]]];
+                    }
+
+                    return [['UULF', 'UULP'], defaultText];
+                case 'shorts':
+                    return [['UUSH', 'UUPS'], defaultText];
+                case 'streams':
+                    return [['UULV', 'UUPV'], defaultText];
+            }
+
+            throw 'Could not detect what content to play.';
+        })();
+
+        const buildPlayAllUrl = playlist => {
+            if (playlist === null) {
+                return 'javascript:void()';
+            }
+
+            if (settingsData.general.features.showPlaylistInsteadOfPlaying) {
+                return `/playlist?list=${playlist}${id}`;
+            }
+
+            return `/playlist?list=${playlist}${id}&playnext=1`;
+        };
+
+        if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
-                    .href(`/playlist?list=${allPlaylist}${id}&playnext=1`)
-                    .onBuildText('Play All')
+                    .href(buildPlayAllUrl(allPlaylist))
+                    .onBuildAppend(allText)
+                    .build(),
+            );
+        } else if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+            parent.insertAdjacentElement(
+                'beforeend',
+                $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
+                    .href(buildPlayAllUrl(popularPlaylist))
+                    .onBuildAppend(popularText)
                     .build(),
             );
         } else {
@@ -383,14 +414,7 @@
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('span.ytpa-btn.ytpa-settings-btn[role="button"]')
-                    .onBuildAppend(
-                        document.importNode(new DOMParser().parseFromString(`
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" aria-label="open settings">
-                                <path d="M12 3.2 l1.2.3.6 1.7 1.6.7 1.6-.8 1.3 1.3-.8 1.6.7 1.6 1.7.6.3 1.2 -.3 1.2-1.7.6 -.7 1.6.8 1.6 -1.3 1.3-1.6-.8 -1.6.7-.6 1.7 -1.2.3-1.2-.3 -.6-1.7-1.6-.7 -1.6.8-1.3-1.3 .8-1.6-.7-1.6 -1.7-.6-.3-1.2 .3-1.2 1.7-.6 .7-1.6-.8-1.6 1.3-1.3 1.6.8 1.6-.7.6-1.7 z"></path>
-                                <circle cx="12" cy="11.5" r="3"></circle>
-                            </svg>
-                        `, 'image/svg+xml').documentElement, true),
-                    )
+                    .onBuildAppend(Icons.settings)
                     .on('click', () => SettingsDialog.show())
                     .build(),
             );
@@ -448,6 +472,11 @@
         // Initially generate button
         apply();
     };
+
+    Reset.subscribe(() => {
+        removeButton();
+        addButton();
+    });
 
     // Removing the button prevents it from still existing when switching between "Videos", "Shorts", and "Live"
     // This is necessary due to the mobile Interval requiring a check for an already existing button
@@ -903,10 +932,10 @@
         const newUuid = () => crypto.randomUUID();
 
         const namespace = ns => {
-            const newHtmlId = () => `ytpa-${ns}-${newUuid()}`;
+            const newIdString = () => `ytpa-${ns}-${newUuid()}`;
 
             return {
-                newHtmlId,
+                newIdString,
             };
         };
 
@@ -970,10 +999,32 @@
             return proxify(rootObject);
         };
 
+        /**
+         * @template {{}} T
+         * @template {string} K
+         *
+         * @typedef {{ [K]: Map, set: (key: string, value: value) => T & Settable}} Settable
+         *
+         * @param {T} object
+         * @param {K} key
+         * @return {T & Settable}
+         */
+        const asSettable = (object, key = 'map') => {
+            object[key] = new Map();
+            object.set = (k, v) => {
+                object[key].set(k, v);
+
+                return object;
+            };
+
+            return object;
+        };
+
         return {
             isObject,
             merge,
             watch,
+            asSettable,
         };
     })()
 
@@ -1058,6 +1109,63 @@
         return { trimIndent, ucfirst };
     })();
 
+    const Icons = (() => {
+        const attachFunctions = icon => {
+            const element = icon.cloneNode(true);
+
+            element.withHeight = height => {
+                element.style.height = height;
+
+                return element;
+            };
+            element.withVerticalAlign = verticalAlign => {
+                element.style.verticalAlign = verticalAlign;
+
+                return element;
+            };
+            element.aligned = () => element.withHeight('1em').withVerticalAlign('-0.145em');
+
+            return element;
+        };
+
+        /**
+         * @param {string} code
+         * @return {Icon}
+         */
+        const create = code => attachFunctions(document.importNode(new DOMParser().parseFromString(code, 'image/svg+xml').documentElement, true));
+
+        return {
+            settings: create(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" aria-label="open settings">
+                    <path d="M12 3.2 l1.2.3.6 1.7 1.6.7 1.6-.8 1.3 1.3-.8 1.6.7 1.6 1.7.6.3 1.2 -.3 1.2-1.7.6 -.7 1.6.8 1.6 -1.3 1.3-1.6-.8 -1.6.7-.6 1.7 -1.2.3-1.2-.3 -.6-1.7-1.6-.7 -1.6.8-1.3-1.3 .8-1.6-.7-1.6 -1.7-.6-.3-1.2 .3-1.2 1.7-.6 .7-1.6-.8-1.6 1.3-1.3 1.6.8 1.6-.7.6-1.7 z"></path>
+                    <circle cx="12" cy="11.5" r="3"></circle>
+                </svg>
+            `),
+            warning: create(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+                    <path
+                        d="M50 8 L95 90 H5 Z"
+                        stroke="currentColor"
+                        stroke-width="6"
+                        stroke-linejoin="round"
+                    />
+                    <path
+                        d="M50 32 V64"
+                        stroke="currentColor"
+                        stroke-width="6"
+                        stroke-linecap="round"
+                    />
+                    <circle
+                        cx="50"
+                        cy="76"
+                        r="3.5"
+                        fill="currentColor"
+                    />
+                </svg>
+            `),
+        };
+    })();
+
     const HtmlCreation = (() => {
         /**
          * Safely dynamically create HTML-Elements.
@@ -1080,7 +1188,7 @@
          *
          * @return WrappedElementBuilder
          */
-        const $builder = (query, ns = null) => {
+        const $builder = query => {
             /**
              * @param {HTMLElement} element
              * @return {HTMLElement&WrappedElementBuilder}
@@ -1559,23 +1667,15 @@
             return result;
         };
 
-        const collection = () => {
-            const map = new Map();
+        const ofGroup = () => Obj.asSettable({ m: { group: _ } });
 
-            const obj = { map };
-            obj.set = (k, v) => {
-                map.set(k, v);
-
-                return obj;
-            };
-
-            return obj;
-        };
+        const collection = () => Obj.asSettable({});
 
         const key = (name, displayText) => ({ name, displayText });
 
         return {
             ofInitial,
+            ofGroup,
             collection,
             key,
         };
@@ -1590,8 +1690,143 @@
         const baseClassName = `ytpa-${ns}`;
         const IdNamespace = Id.namespace(ns);
 
+        const has = x => x !== undefined;
+
         /**
-         * @param {ValueDialogComponents} components
+         * @param {string} name
+         * @param {string} displayText
+         * @param {ComponentT} component
+         * @return {HTMLElement}
+         */
+        const createElementByComponent = (name, displayText, component) => $builder(`div.${baseClassName}-container`).onBuild(container => {
+            const id = IdNamespace.newIdString();
+            const helpId = `${id}-help`;
+
+            const init = element => component.value !== undefined && (
+                component.m.toggle
+                    ? (element.checked = !!component.value)
+                    : (element.value = component.value)
+            );
+            const $b = tag => $builder(tag).className(baseClassName);
+            const build = builder => builder
+                .id(id)
+                .name(name)
+                .onBuild(init)
+                .build();
+
+            /** @var {HTMLElement|boolean} */
+            let result = !_
+                || (has(component.m.dummy) && build($b('div').onBuildText('Click me!').on(
+                    'click',
+                    (event) => event.target.append(component.hooked.test),
+                )))
+                || (has(component.m.text) && build($b('input[type="text"]').on(
+                    'input',
+                    (event) => component.value = event.target.value,
+                )))
+                || (has(component.m.textarea) && build($b('textarea').on(
+                    'input',
+                    (event) => component.value = event.target.value,
+                )))
+                || (has(component.m.password) && build($b('input[type="password"]').on(
+                    'input',
+                    (event) => component.value = event.target.value,
+                )))
+                || (has(component.m.number) && build($b('input[type="number"]').on(
+                    'input',
+                    (event) => component.value = event.target.value,
+                )))
+                || (has(component.m.oneOf) && build($b('select')
+                    .on(
+                        'change',
+                        event => component.value = event.target.value,
+                    )
+                    .onBuildAppend(
+                        ...Object.entries(component.of).map(
+                            ([k, v]) => {
+                                const option = $builder('option')
+                                    .value(k)
+                                    .onBuildText(v);
+                                if (k === component.value) {
+                                    option.selected('');
+                                }
+
+                                return option.build();
+                            }
+                        ),
+                    )
+                ))
+                // TODO: finish with multiple choice checkboxes!
+                || (has(component.m.anyOf) && build($builder('div')
+                    .id(id)
+                    .name(name)
+                    .className(`${baseClassName}-WIP`)
+                    .onBuildText('UNIMPLEMENTED')
+                ));
+
+            if (typeof result === 'object') {
+                // wrap the stuff into a div with label
+                result = $builder('div').onBuildAppend(
+                    $builder('label').for(id).onBuildText(displayText).build(),
+                    result,
+                ).build();
+            } else if (has(component.m.toggle)) {
+                // checkboxes are built more custom
+                result = build(
+                    $builder('label')
+                        .id(id)
+                        .name(name)
+                        .className(baseClassName)
+                        .onBuildAppend(
+                            $builder('div.switch')
+                                .onBuildAppend(
+                                    build($builder('input[type="checkbox"]')),
+                                    $builder('span.slider').aria_hidden('true').build(),
+                                )
+                                .build(),
+                            $builder('div.text')
+                                .onBuildText(displayText)
+                                .build(),
+                        )
+                        .on(
+                            'change',
+                            (event) => {
+                                if (
+                                    !event.target.checked
+                                    && component.hooked.confirm
+                                    && (!confirm(component.hooked.confirm))
+                                ) {
+                                    event.preventDefault();
+                                    event.target.checked = true;
+
+                                    return;
+                                }
+
+                                component.value = event.target.checked;
+                            },
+                        )
+                );
+            }
+
+            if (typeof result === 'boolean') {
+                throw 'Could not build ValuesDialog component.';
+            }
+
+            container.append(result);
+            if (has(component.hooked.help)) {
+                container.append(
+                    $builder(`details`)
+                        .id(helpId)
+                        .className(`${baseClassName}-help`)
+                        .onBuildText(component.hooked.help)
+                        .build(),
+                );
+                result.setAttribute('aria-describedby', helpId);
+            }
+        }).build();
+        
+        /**
+         * @param {ComponentGroup | Components} components
          * @return {HTMLElement[]}
          */
         const createElements = components => components.map.entries().toArray().map(
@@ -1599,154 +1834,46 @@
              * @param {string} name
              * @param {string} displayText
              * @param {ComponentT} component
-             * @param i
              * @return {HTMLElement}
              */
-            ([{ name, displayText }, component], i) => $builder(`div.${baseClassName}-container`).onBuild(
-                container => {
-                    const id = IdNamespace.newHtmlId();
-                    const helpId = `${id}-help`;
-
-                    const init = element => component.value !== undefined && (
-                        component.m.toggle
-                            ? (element.checked = !!component.value)
-                            : (element.value = component.value)
-                    );
-                    const $b = tag => $builder(tag).className(baseClassName);
-                    const build = builder => builder
-                        .id(id)
-                        .name(name)
-                        .data_index(i.toString())
-                        .onBuild(init)
-                        .build();
-
-                    const has = x => x !== undefined;
-
-                    /** @var {HTMLElement|boolean} */
-                    let result = !_
-                        || (has(component.m.dummy) && build($b('div').onBuildText('Click me!').on(
-                            'click',
-                            (event) => event.target.append(component.hooked.test),
-                        )))
-                        || (has(component.m.text) && build($b('input[type="text"]').on(
-                            'input',
-                            (event) => component.value = event.target.value,
-                        )))
-                        || (has(component.m.textarea) && build($b('textarea').on(
-                            'input',
-                            (event) => component.value = event.target.value,
-                        )))
-                        || (has(component.m.password) && build($b('input[type="password"]').on(
-                            'input',
-                            (event) => component.value = event.target.value,
-                        )))
-                        || (has(component.m.number) && build($b('input[type="number"]').on(
-                            'input',
-                            (event) => component.value = event.target.value,
-                        )))
-                        || (has(component.m.oneOf) && build($b('select')
-                            .on(
-                                'change',
-                                event => component.value = event.target.value,
-                            )
-                            .onBuildAppend(
-                                ...Object.entries(component.of).map(
-                                    ([k, v]) => {
-                                        const option = $builder('option')
-                                            .value(k)
-                                            .onBuildText(v);
-                                        if (k === component.value) {
-                                            option.selected('');
-                                        }
-
-                                        return option.build();
-                                    }
-                                ),
-                            )
-                        ))
-                        // TODO: finish with multiple choice checkboxes!
-                        || (has(component.m.anyOf) && build($builder('div')
-                            .id(id)
-                            .name(name)
-                            .className(`${baseClassName}-WIP`)
-                            .onBuildText('UNIMPLEMENTED')
-                            .data_index(i.toString())
-                        ));
-
-                    if (typeof result === 'object') {
-                        // wrap the stuff into a div with label
-                        result = $builder('div').onBuildAppend(
-                            $builder('label').for(id).onBuildText(displayText).build(),
-                            result,
-                        ).build();
-                    } else if (has(component.m.toggle)) {
-                        // checkboxes are built more custom
-                        result = build(
-                            $builder('label')
-                                .id(id)
-                                .name(name)
-                                .className(baseClassName)
-                                .onBuildAppend(
-                                    $builder('div.switch')
-                                        .onBuildAppend(
-                                            build($builder('input[type="checkbox"]')),
-                                            $builder('span.slider').aria_hidden('true').build(),
-                                        )
-                                        .build(),
-                                    $builder('div.text')
-                                        .onBuildText(displayText)
-                                        .build(),
-                                )
-                                .on(
-                                    'change',
-                                    (event) => {
-                                        if (
-                                            !event.target.checked
-                                            && component.hooked.confirm
-                                            && (!confirm(component.hooked.confirm))
-                                        ) {
-                                            event.preventDefault();
-                                            event.target.checked = true;
-
-                                            return;
-                                        }
-
-                                        component.value = event.target.checked;
-                                    },
-                                )
-                                .data_index(i.toString())
-                        );
-                    }
-
-                    if (typeof result === 'boolean') {
-                        throw 'Could not build ValuesDialog component.';
-                    }
-
-                    container.append(result);
-                    if (has(component.hooked.help)) {
-                        container.append(
-                            $builder(`div`)
-                                .id(helpId)
-                                .className(`${baseClassName}-help`)
-                                .onBuildText(component.hooked.help)
+            ([{ name, displayText }, component]) => {
+                if (has(component.m.group)) {
+                    return $builder(`div.${baseClassName}-group`)
+                        .onBuildAppend(
+                            $builder(`div.${baseClassName}-group-title`)
+                                .onBuildText(displayText)
                                 .build(),
-                        );
-                        result.setAttribute('aria-describedby', helpId);
-                    }
-                },
-            ).build(),
+                            ...createElements(component)
+                        )
+                        .build();
+                }
+
+                return createElementByComponent(name, displayText, component);
+            },
         );
 
         /**
-         * @param {ValueDialogComponents} components
+         * @param {ComponentT} component
+         * @return {any}
+         */
+        const getValue = component => {
+            if (has(component.m.group)) {
+                return Object.fromEntries(component.map.entries().toArray().map(([k, v]) => [k.name, getValue(v)]));
+            }
+
+            return component.value;
+        };
+
+        /**
+         * @param {Components} components
          * @return {Promise<{ [key: string]: any }>}
          */
         const show = async (components) => newDialog()
-            .with('YTPA Components', push => {
+            .with('YTPA Settings', push => {
                 createElements(components).forEach(push);
             })
             .then(() => Object.fromEntries(
-                components.map.entries().map(([k, v]) => [k.name, v.value]),
+                components.map.entries().map(([k, v]) => [k.name, getValue(v)]),
             ));
 
         return { show };
@@ -1875,6 +2002,18 @@
                     },
                 },
             })),
+            M('20260223-0', previous => Obj.merge(previous, {
+                data: {
+                    general: {
+                        features: {
+                            // Both added due to demand and low implementation effort.
+                            // See: https://github.com/RobertWesner/YouTube-Play-All/issues/52
+                            showPlaylistInsteadOfPlaying: false,
+                            playEverythingInsteadOfVideos: false,
+                        },
+                    },
+                },
+            })),
         ];
 
         const migrate = previous => {
@@ -1898,19 +2037,11 @@
         );
         const clear = async () => {
             await GM.deleteValue(gmKey);
-            await sync();
             window.location.reload();
         };
 
         await load();
 
-        /**
-         * @typedef {{
-         *  get: () => SettingsData,
-         *  set: (k: string, v: any) => Promise,
-         *  clear: () => Promise,
-         * }} SettingsStorage
-         */
         const exports = {
             data,
             clear,
@@ -1921,15 +2052,15 @@
     })();
 
     const SettingsDialog = (async () => {
+        const Component = ValuesDialogComponent;
         const console = Console;
         /** @var {SettingsData} */
         const data = (await settingsStoragePromise).data();
 
-        const components = (() => {
-            const Component = ValuesDialogComponent;
-
-            return Component
-                .collection()
+        const components = Component
+            .collection()
+            .set(Component.key('appearance', 'Appearance'), Component
+                .ofGroup()
                 .set(Component.key('buttonTheme', 'Theme of the "Play All"-button'), Component
                     .ofInitial(data.general.ui.buttonTheme)
                     .asOneOf({
@@ -1954,15 +2085,35 @@
                     `))
                     .withConfirm('Are you sure you want to disable te menu button?\nYou might not be able to restore it!'),
                 )
-            ;
-        })();
+            )
+            .set(Component.key('functionality', 'Functionality'), Component
+                .ofGroup()
+                .set(Component.key('showPlaylistInsteadOfPlaying', 'Show playlist instead of playing it'), Component
+                    .ofInitial(data.general.features.showPlaylistInsteadOfPlaying)
+                    .asToggle()
+                )
+                .set(Component.key('playEverythingInsteadOfVideos', 'Play all content instead of just videos'), Component
+                    .ofInitial(data.general.features.playEverythingInsteadOfVideos)
+                    .asToggle()
+                    .withHelp(Fmt.trimIndent(`
+                        Only applies to the playlist used on "Videos" when sorting by "Latest".
+                    `))
+                )
+            )
+        ;
 
         const show = () => {
             ValuesDialog.show(components).then(values => {
                 const {
-                    buttonTheme,
-                    spacerVisible,
-                    settingsButtonVisible,
+                    appearance: {
+                        buttonTheme,
+                        spacerVisible,
+                        settingsButtonVisible,
+                    },
+                    functionality: {
+                        showPlaylistInsteadOfPlaying,
+                        playEverythingInsteadOfVideos,
+                    },
                 } = values;
 
                 if (Object.values(G.s.ui.button.theme).includes(buttonTheme)) {
@@ -1973,13 +2124,37 @@
 
                 data.general.ui.spacerVisible = spacerVisible;
                 data.general.ui.settingsButtonVisible = settingsButtonVisible;
+                data.general.features.showPlaylistInsteadOfPlaying = showPlaylistInsteadOfPlaying;
+                data.general.features.playEverythingInsteadOfVideos = playEverythingInsteadOfVideos;
 
                 SettingsHandlers.updateByStorageData();
+                Reset.reset();
             });
         };
 
         return {
             show,
+        };
+    })();
+
+    const Reset = (() => {
+        const listeners = new Set();
+
+        const reset = () => [...listeners].forEach(listener => listener());
+
+        /**
+         * @param {function} listener
+         * @return {() => void}
+         */
+        const subscribe = listener => {
+            listeners.add(listener);
+
+            return () => listeners.delete(listener);
+        };
+
+        return {
+            reset,
+            subscribe,
         };
     })();
 
@@ -2002,6 +2177,7 @@
         Obj,
         ControlFlow,
         Fmt,
+        Icons,
         HtmlCreation,
         Console,
         Safety,
@@ -2012,7 +2188,8 @@
         ValuesDialogComponent,
         ValuesDialog,
         SettingsHandlers,
-        Debug
+        Reset,
+        Debug,
     }, {
         SettingsStorage,
         SettingsDialog,
@@ -2442,9 +2619,17 @@
                             span.slider
                         div.text
                     .ytpa-dialog-component-help
+                    
+                OR
+                
+                .ytpa-dialog-component-group
+                    .ytpa-dialog-component-group-title
+                    {any of the above}
             */
 
-            .ytpa-dialog-component-container:not(:last-child) {
+            .ytpa-dialog-component-container:not(:last-child),
+            .ytpa-dialog-component-group,
+            .ytpa-dialog-component-group-title {
                 margin-bottom: 1em;
             }
 
@@ -2557,6 +2742,16 @@
                 outline: 3px solid var(--ytpa-bg-additive-heavy);
                 outline-offset: 2px;
             }
+            
+            .ytpa-dialog-component-group .ytpa-dialog-component-group-title {
+                font-size: 1.2em;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+            
+            .ytpa-dialog-component-group > :not(.ytpa-dialog-component-group-title) {
+                margin-left: 0.6rem;
+            }
         `],
         ['ytpa-spacer', /* language=css */ `
             html {
@@ -2594,6 +2789,7 @@
 
     // where the things live that are needed everywhere, except for the outside world
 
+    // TODO: only really relevant to ifUi() for now, might be worth renaming, since all feature settings dont need a flat string representation
     const settings = {
         ui: {
             button: {
@@ -2680,13 +2876,13 @@
  * @property {(value: string) => WrappedElementBuilder} checked
  * @property {(value: string) => WrappedElementBuilder} selected
  * @property {(value: string) => WrappedElementBuilder} for
+ * @property {(value: string) => WrappedElementBuilder} title
  * @property {(value: string) => WrappedElementBuilder} aria_label
  * @property {(value: string) => WrappedElementBuilder} aria_haspopup
  * @property {(value: string) => WrappedElementBuilder} aria_expanded
  * @property {(value: string) => WrappedElementBuilder} aria_hidden
  * @property {(value: string) => WrappedElementBuilder} aria_describedby
  * @property {(value: string) => WrappedElementBuilder} data_list
- * @property {(value: string) => WrappedElementBuilder} data_index
  */
 // BEWARE, THE BELOW JSDOC IS NOT FOR THE FAINT OF HEART
 // This is not unhinged, this isn't even overhinged, we have arrived at extrahinged.
@@ -2725,6 +2921,8 @@
  *
  * @typedef {{ of: any, value: any, value: any, m: Record<M, any>, hooked: HookBag }} ComponentBase
  */
+/** @typedef {{ name: string, displayText: string }} ComponentKey */
+/** @typedef {{ m: { group: any } } & Components} ComponentGroup */
 /** @typedef {ComponentBase<'dummy'> & Hooks<ComponentDummy>} ComponentDummy */
 /** @typedef {ComponentBase<'text'> & Hooks<ComponentText>} ComponentText */
 /** @typedef {ComponentBase<'textarea'> & Hooks<ComponentTextarea>} ComponentTextarea */
@@ -2736,6 +2934,7 @@
 /**
  * @typedef {
  *  {}
+ *  | ComponentGroup
  *  | ComponentDummy
  *  | ComponentText
  *  | ComponentTextarea
@@ -2747,7 +2946,7 @@
  * } ComponentT
  */
 /**
- * @typedef {{ map: Map<{ name: string, displayText: string }, ComponentT> }} ValueDialogComponents
+ * @typedef {{ map: Map<ComponentKey, ComponentT> }} Components
  */
 /**
  * @typedef {{
@@ -2757,6 +2956,10 @@
  *          spacerVisible: boolean,
  *          settingsButtonVisible: boolean,
  *      },
+ *      features: {
+ *          showPlaylistInsteadOfPlaying: boolean,
+ *          playEverythingInsteadOfVideos: boolean,
+ *      },
  *  },
  * }} SettingsData
  *
@@ -2764,4 +2967,18 @@
  *  version: number,
  *  data: SettingsData,
  * }} Settings
+ */
+/**
+ * @typedef {{
+ *  get: () => SettingsData,
+ *  set: (k: string, v: any) => Promise,
+ *  clear: () => Promise,
+ * }} SettingsStorage
+ */
+/**
+ * @typedef {HTMLElement & {
+ *  withHeight: (height: string) => Icon,
+ *  withVerticalAlign: (verticalAlign: string) => Icon,
+ *  aligned: () => Icon,
+ * }} Icon
  */
