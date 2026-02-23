@@ -77,7 +77,6 @@
     const [syncModules, asyncModules] = loadModules();
     Object.entries(syncModules).forEach(verifyModule);
     const {
-        ControlFlow: { _ },
         Fmt,
         Icons,
         HtmlCreation: { $builder, $style },
@@ -266,7 +265,7 @@
                 ? 'View'
                 : 'Play';
             const defaultText = [`${verb} All`, `${verb} Popular`];
-            const match = window.location.pathname.match(/^\/[^\/]+\/(.+)/);
+            const match = window.location.pathname.match(/^\/[^/]+\/(.+)/);
 
             if (!match) {
                 throw 'Trying to access play all outside of channel content tabs.';
@@ -1344,7 +1343,8 @@
         return {
             info: createLogger(console.info, templates.default),
             error: createLogger(console.error, templates.default),
-            log: createLogger(console.debug, templates.debug),
+            // eslint-disable-next-line
+            log: createLogger(console.log, templates.debug),
         };
     })();
 
