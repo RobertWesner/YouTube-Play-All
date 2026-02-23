@@ -17,7 +17,7 @@ jobs:
                 env:
                     GH_TOKEN: ${{ steps.app-token.outputs.token }}
                 run: |
-                    gh workflow run release-from-upstream.yml \
+                    gh workflow run release.yml \
                         -R RobertWesner/YouTube-Play-All-Standalone \
                         -f tag='${{ github.event.release.tag_name }}' \
                         -f source_repo='${{ github.repository }}'

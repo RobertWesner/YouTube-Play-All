@@ -1,5 +1,11 @@
 # YTPA Changelog
 
+## 20260223-0
+
+* Implemented `Component.ofGroup()` to group individual components together.
+* [#52](https://github.com/RobertWesner/YouTube-Play-All/issues/52) Implemented "UU" playlist and "view playlist" settings.
+
+
 ## 20260222-0
 
 A lot of housekeeping, many internal refactors.
