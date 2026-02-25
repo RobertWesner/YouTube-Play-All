@@ -1,5 +1,12 @@
 # YTPA Changelog
 
+## 20260225-0
+
+Hotfix release to address issues with Chromium browsers.
+
+* Quick bypass for trusted types on Chrome since the relevant inputs are safe. Should be reworked.
+
+
 ## 20260223-0
 
 * Implemented `Component.ofGroup()` to group individual components together.
