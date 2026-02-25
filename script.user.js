@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260223-0
+// @version         20260225-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -78,6 +78,7 @@
     Object.entries(syncModules).forEach(verifyModule);
     const {
         Fmt,
+        TrustedTypes: { policy },
         Icons,
         HtmlCreation: { $builder, $style },
         Console: console,
@@ -101,7 +102,7 @@
     Greeter.greet(debugInfo);
     document.head.append(
         $builder('script#ytpa-debug-info[type="application/json"]')
-            .onBuildText(JSON.stringify(debugInfo, null, 2))
+            .onBuildText(policy.createScript(JSON.stringify(debugInfo, null, 2)))
             .build(),
     );
 
@@ -1108,7 +1109,32 @@
         return { trimIndent, ucfirst };
     })();
 
+    const TrustedTypes = (() => {
+        const { pass } = ControlFlow;
+
+        // yes, kind of what TT was supposed to prevent, but I control the input, so...
+        // TODO: maybe implement actual sanitization? sounds like wasted effort
+        const policy = (
+            typeof trustedTypes !== 'undefined'
+                ? trustedTypes
+                : null
+        )?.createPolicy?.('userscript', {
+            createHTML: pass,
+            createScript: pass,
+        }) ?? new Proxy({}, {
+            get() {
+                return pass;
+            },
+        });
+
+        return {
+            policy,
+        };
+    })();
+
     const Icons = (() => {
+        const { policy } = TrustedTypes;
+
         const attachFunctions = icon => {
             const element = icon.cloneNode(true);
 
@@ -1131,7 +1157,7 @@
          * @param {string} code
          * @return {Icon}
          */
-        const create = code => attachFunctions(document.importNode(new DOMParser().parseFromString(code, 'image/svg+xml').documentElement, true));
+        const create = code => attachFunctions(document.importNode(new DOMParser().parseFromString(policy.createHTML(code), 'image/svg+xml').documentElement, true));
 
         return {
             settings: create(`
@@ -2177,6 +2203,7 @@
         Obj,
         ControlFlow,
         Fmt,
+        TrustedTypes,
         Icons,
         HtmlCreation,
         Console,
@@ -2852,7 +2879,7 @@
  * } WrappedElementBuilderOnHandler
  */
 /**
- * @typedef {Object} WrappedElementBuilder
+ * @typedef {Object} WrappedElementBuilderBase
  * @property {() => HTMLElement} build
  * @property {() => Promise<HTMLElement>} buildWithSync
  * @property {(fn: (element: HTMLElement) => void) => WrappedElementBuilder} onBuild
@@ -2882,7 +2909,11 @@
  * @property {(value: string) => WrappedElementBuilder} aria_expanded
  * @property {(value: string) => WrappedElementBuilder} aria_hidden
  * @property {(value: string) => WrappedElementBuilder} aria_describedby
- * @property {(value: string) => WrappedElementBuilder} data_list
+ */
+/**
+ * With fallback for undocumented calls like all dynamic data_*().
+ *
+ * @typedef {WrappedElementBuilderBase | Record<string, (value: string) => WrappedElementBuilder>} WrappedElementBuilder
  */
 // BEWARE, THE BELOW JSDOC IS NOT FOR THE FAINT OF HEART
 // This is not unhinged, this isn't even overhinged, we have arrived at extrahinged.
