@@ -1,5 +1,10 @@
 # YTPA Changelog
 
+## Infrastructure 2026-03-02
+
+* [#69](https://github.com/RobertWesner/YouTube-Play-All/issues/69) Add debugging information for failed tests.
+
+
 ## 20260225-0
 
 Hotfix release to address issues with Chromium browsers.

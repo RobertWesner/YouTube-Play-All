@@ -5,7 +5,7 @@ module Command.Script
 
 import Prelude
 import Toppokki as T
-import Lib.Helpers (setUpUserscript, waitForAndClick)
+import Lib.Helpers (setUpJS, setUpUserscript, waitForAndClick)
 import Effect.Aff (Aff, delay)
 import Lib.Info (info)
 import Control.Monad.Error.Class (catchError)
@@ -20,6 +20,18 @@ browser visible = T.launch { args: [ "--no-sandbox", "--disable-setuid-sandbox" 
 setup :: T.Browser -> Aff T.Page
 setup browser' = do
     page <- T.newPage browser'
+    T.setViewport
+        { width: 1920.0
+        , height: 1080.0
+        , deviceScaleFactor: 1.0
+        , isMobile: false
+        , hasTouch: false
+        , isLandscape: true
+        }
+        page
+
+    -- very cursed, yes; useful still!
+    setUpJS "(()=>{const d=document.head.appendChild(Object.assign(document.createElement('script'),{id:'console-dump',type:'text/plain'}));const s=v=>{try{return JSON.stringify(v)}catch{return JSON.stringify(v,(k,val)=>typeof val==='bigint'?val.toString()+'n':typeof val==='function'?'[Function]':val)}};for(const k of Object.keys(console)){if(typeof console[k]==='function'){const o=console[k];console[k]=function(...a){try{d.textContent+=k+'('+a.map(s).join(',')+')\\n'}catch{}return o.apply(this,a)}}}})();" page
 
     setUpUserscript page
     T.goto (T.URL "https://youtube.com") page

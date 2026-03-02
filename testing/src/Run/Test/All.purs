@@ -12,6 +12,11 @@ import Command.Script (browser, setup)
 import Data.Either (Either(..))
 import Effect (Effect)
 import Command.Step (startStep, step)
+import Control.Monad.Error.Class (catchError)
+import Node.FS.Aff as FS
+import Node.Encoding (Encoding(UTF8))
+import Data.Foldable (traverse_)
+import Node.FS.Perms (permsAll)
 
 -- TODO: perhaps it would be useful to have a --show option for tests to disable headless without modification
 -- would be best if i had a handler moduler for that
@@ -20,13 +25,34 @@ import Command.Step (startStep, step)
 -- let args = Array.drop 2 argv  -- drop "node" + script path, keep user args
 
 main :: Effect Unit
-main = launchAff_ script
+main = launchAff_ runScript
 
-script :: Aff Unit
-script = do
+errPath :: String -> String
+errPath name = "/tmp/ytpa_test_error/" <> name
+
+runScript :: Aff Unit
+runScript = do
     browser' <- browser false
-    page' <- setup browser'
+    page <- setup browser'
 
+    catchError (script page) \err -> do
+        info $ show err
+
+        let dir = errPath ""
+        FS.mkdir' dir { recursive: true, mode: permsAll }
+        entries <- FS.readdir dir
+        traverse_ (\name -> FS.unlink (dir <> "/" <> name)) entries
+
+        _ <- T.screenshot { path: errPath "page.png", type: "png", fullPage: true } page
+        html <- T.content page
+        FS.writeTextFile UTF8 (errPath "page.html") html
+
+        pure unit
+
+    T.close browser'
+
+script :: T.Page -> Aff Unit
+script page' = do
     let step' = step page'
     result <- startStep
         >>= step' "videos-latest" "https://www.youtube.com/playlist?list=UULFy0tKL1T7wFoYcxCe0xjN6Q&playnext=1" (
@@ -162,8 +188,6 @@ script = do
                 waitForAndClick btnDropdownMenuLatestSelector page
                 delay (Milliseconds 500.0)
         )
-
-    T.close browser'
 
     case result of
         Left err -> do
