@@ -15,8 +15,36 @@ jobs:
             -   name: Checkout repo
                 uses: actions/checkout@v4
 
-            -   name: Build and run Containerfile
+            -   name: Build image
                 run: |
                     IMAGE_ID=$(docker build -q -f Containerfile .)
-                    echo "Built image: $IMAGE_ID"
-                    docker run --rm "$IMAGE_ID"
+                    echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
+
+            -   name: Run container
+                run: |
+                    mkdir -p debug_out
+                    set +e
+                    docker run \
+                        -v ${{ github.workspace }}/debug_out:/tmp/ytpa_test_error \
+                        "$IMAGE_ID"
+                    EXIT_CODE=$?
+                    echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
+                    exit 0
+
+            -   name: Zip debug output on failure
+                if: env.EXIT_CODE != '0'
+                run: |
+                    cd debug_out
+                    zip -r ../debug.zip .
+                    cd ..
+
+            -   name: Upload debug artifact on failure
+                if: env.EXIT_CODE != '0'
+                uses: actions/upload-artifact@v4
+                with:
+                    name: debug
+                    path: debug.zip
+
+            -   name: Fail job if on failure
+                if: env.EXIT_CODE != '0'
+                run: exit 1
