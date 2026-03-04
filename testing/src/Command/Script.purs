@@ -5,7 +5,7 @@ module Command.Script
 
 import Prelude
 import Toppokki as T
-import Lib.Helpers (setUpJS, setUpUserscript, waitForAndClick)
+import Lib.Helpers (setUpJS, setUpUserscript, waitForAndClickWithTimeout)
 import Effect.Aff (Aff, delay)
 import Lib.Info (info)
 import Control.Monad.Error.Class (catchError)
@@ -39,7 +39,7 @@ setup browser' = do
     -- TODO: check if this even actually works as intended, at best this causes my pipeline to be slow due to internal hard timeouts - i could pass a proper timeout but not from here without a new waitForAndClickWithTimeout
     catchError (do
       info "Waiting to reject cookies..."
-      waitForAndClick "button[aria-label*=\"Reject the use of cookies\"]" page
+      waitForAndClickWithTimeout "button[aria-label*=\"Reject the use of cookies\"]" 15000 page
     ) (\_ -> do
       info "Skipping the wait and attempting to continue..."
       pure unit

@@ -12,7 +12,7 @@ import Command.Script (browser, setup)
 import Data.Either (Either(..))
 import Effect (Effect)
 import Command.Step (startStep, step)
-import Control.Monad.Error.Class (catchError)
+import Control.Monad.Error.Class (catchError, throwError)
 import Node.FS.Aff as FS
 import Node.Encoding (Encoding(UTF8))
 import Data.Foldable (traverse_)
@@ -47,7 +47,7 @@ runScript = do
         html <- T.content page
         FS.writeTextFile UTF8 (errPath "page.html") html
 
-        pure unit
+        throwError err
 
     T.close browser'
 

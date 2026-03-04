@@ -7,8 +7,8 @@ import Node.FS.Aff (readTextFile)
 import Node.Encoding (Encoding(UTF8))
 import Data.Time.Duration (Milliseconds(Milliseconds))
 
-timeout :: Int
-timeout = 1000 * 60 * 10 -- 10min, just so the pipeline doesnt randomly die, because I spent hours debugging locally and could not find any issues
+timeout10min :: Int
+timeout10min = 1000 * 60 * 10 -- 10min, just so the pipeline doesnt randomly die, because I spent hours debugging locally and could not find any issues
 
 setUpJS :: String -> T.Page -> Aff Unit
 setUpJS script page =
@@ -23,16 +23,19 @@ setUpUserscript page = do
     setUpJS "window.GM = { info: { script: { version: '21110101-0-test' } }, getValue: () => ({}) };" page
     setUpJS src page
 
-waitForAndClick :: String -> T.Page -> Aff Unit
-waitForAndClick selector page = do
+waitForAndClickWithTimeout :: String -> Int -> T.Page -> Aff Unit
+waitForAndClickWithTimeout selector timeout page = do
     _ <- T.pageWaitForSelector (T.Selector selector) { timeout: timeout } page
     T.click (T.Selector selector) page
+
+waitForAndClick :: String -> T.Page -> Aff Unit
+waitForAndClick selector page = waitForAndClickWithTimeout selector timeout10min page
 
 waitForClearScreen :: T.Page -> Aff Unit
 waitForClearScreen page = do
     _ <- T.unsafeEvaluateStringFunction ("document.head.remove();const lock=document.createElement('div');lock.id='lock';lock.textContent='Waiting';document.body.textContent='';document.body.append(lock);") page
     delay (Milliseconds 500.0)
-    _ <- T.pageWaitForSelector (T.Selector "#lock") { timeout: timeout } page
+    _ <- T.pageWaitForSelector (T.Selector "#lock") { timeout: timeout10min } page
     delay (Milliseconds 500.0)
 
 ytpaSelector :: String
