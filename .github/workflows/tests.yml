@@ -23,6 +23,7 @@ jobs:
             -   name: Run container
                 run: |
                     mkdir -p debug_out
+                    chmod 0777 debug_out
                     set +e
                     docker run \
                         -v ${{ github.workspace }}/debug_out:/tmp/ytpa_test_error \
@@ -31,19 +32,12 @@ jobs:
                     echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
                     exit 0
 
-            -   name: Zip debug output on failure
-                if: env.EXIT_CODE != '0'
-                run: |
-                    cd debug_out
-                    zip -r ../debug.zip .
-                    cd ..
-
             -   name: Upload debug artifact on failure
                 if: env.EXIT_CODE != '0'
                 uses: actions/upload-artifact@v4
                 with:
                     name: debug
-                    path: debug.zip
+                    path: debug_out
 
             -   name: Fail job if on failure
                 if: env.EXIT_CODE != '0'
