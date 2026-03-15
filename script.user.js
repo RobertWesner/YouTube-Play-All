@@ -721,7 +721,7 @@
             elements.forEach(element => {
                 const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
                 if (!isWatched(videoId)) {
-                    localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(), [videoId]: false }));
+                    localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(true), [videoId]: false }));
                 }
 
                 element.href += '&ytpa-random=' + ytpaRandom;
@@ -738,9 +738,22 @@
                 }
             });
         };
-        const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
+        const getStorage = (allowEmpty = false) => {
+            let value = localStorage.getItem(getStorageKey());
+            if (!value) {
+                if (allowEmpty) {
+                    return {};
+                }
 
-        const isWatched = videoId => getStorage()[videoId] || false;
+                updateStorage();
+
+                return getStorage(true);
+            }
+
+            return JSON.parse(value);
+        }
+
+        const isWatched = videoId => getStorage(true)[videoId] || false;
         const markWatched = videoId => {
             localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(), [videoId]: true }));
             document.querySelectorAll(`#wc-endpoint[href*="${videoId}"]`).forEach(
@@ -881,8 +894,6 @@
 
             if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
                 playNextRandom();
-
-                return;
             }
 
             safeEventListener(document, 'keydown', event => {
