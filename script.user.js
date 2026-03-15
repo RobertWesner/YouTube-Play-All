@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260225-0
+// @version         20260315-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -657,8 +657,7 @@
                 }
             }, 1000);
 
-            // TODO: this does not look like it is called on the new UI,
-            //       the new UI seems to preserves the GET-parameter on its own.
+            // TODO: this does not look like it is called on the new UI.
             safeEventListener(document.body, 'keydown', event => {
                 // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
@@ -710,8 +709,35 @@
          * @type {'random'|'prefer-newest'|'prefer-oldest'}
          */
         const ytpaRandom = urlParams.get('ytpa-random');
+        const getPlaylistContainer = () => document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer');
 
         const getStorageKey = () => `ytpa-random-${urlParams.get('list')}`;
+        const updateStorage = () => {
+            const elements = getPlaylistContainer().querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
+            if (elements.length === 0) {
+                return;
+            }
+
+            elements.forEach(element => {
+                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                if (!isWatched(videoId)) {
+                    localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(), [videoId]: false }));
+                }
+
+                element.href += '&ytpa-random=' + ytpaRandom;
+                // This bypasses the client side routing
+                safeEventListener(element, 'click', event => {
+                    event.preventDefault();
+
+                    window.location.href = element.href;
+                });
+
+                const entryKey = getVideoId(element.href);
+                if (isWatched(entryKey)) {
+                    element.parentElement.setAttribute('hidden', '');
+                }
+            });
+        };
         const getStorage = () => JSON.parse(localStorage.getItem(getStorageKey()) || '{}');
 
         const isWatched = videoId => getStorage()[videoId] || false;
@@ -799,7 +825,7 @@
                 return;
             }
 
-            const playlistContainer = document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer ');
+            const playlistContainer = getPlaylistContainer();
             if (playlistContainer === null) {
                 return;
             }
@@ -808,8 +834,8 @@
             }
 
             playlistContainer.setAttribute('ytpa-random', 'applied');
-            playlistContainer.insertAdjacentElement(
-                'afterbegin',
+            playlistContainer.querySelector('#items').insertAdjacentElement(
+                'beforebegin',
                 $builder('div.ytpa-random-notice').onBuildAppend(
                     'This playlist is using random play.',
                     $builder('br').build(),
@@ -819,38 +845,28 @@
                 ).build(),
             );
 
-            const storage = getStorage();
-
             // ensure all the links are "corrected" to random play
-            const playlistElementsInterval = safeInterval(() => {
-                const elements = playlistContainer.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
-                if (elements.length === 0) {
-                    clearInterval(playlistElementsInterval);
+            safeInterval(updateStorage, 1000);
 
+            // has to be an interval because YouTube keeps erasing the badge
+            safeInterval(() => {
+                if (playlistContainer.querySelector('.ytpa-badge.ytpa-random-badge')) {
                     return;
                 }
 
-                elements.forEach(element => {
-                    const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
-                    if (!isWatched(videoId)) {
-                        storage[videoId] = false;
-                    }
+                const header = playlistContainer.querySelector('h3 a');//yt-simple-endpoint style-scope yt-formatted-string
+                header.innerHTML += ` <span class="ytpa-badge ytpa-random-badge">${ytpaRandom} <span style="font-size: 2rem; vertical-align: top">&times;</span></span>`;
+                header.href = 'javascript:none';
+                header.querySelector('.ytpa-random-badge').addEventListener('click', event => {
+                    event.preventDefault();
 
-                    element.href += '&ytpa-random=' + ytpaRandom;
-                    // This bypasses the client side routing
-                    safeEventListener(element, 'click', event => {
-                        event.preventDefault();
+                    localStorage.removeItem(getStorageKey());
 
-                        window.location.href = element.href;
-                    });
-
-                    const entryKey = getVideoId(element.href);
-                    if (isWatched(entryKey)) {
-                        element.parentElement.setAttribute('hidden', '');
-                    }
+                    let params = new URLSearchParams(location.search);
+                    params.delete('ytpa-random');
+                    window.location.href = `${window.location.pathname}?${params.toString()}`;
                 });
-            }, 1000);
-            localStorage.setItem(getStorageKey(), JSON.stringify(storage));
+            }, 5000);
 
             if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
                 playNextRandom();
@@ -2302,7 +2318,14 @@
                 border-top-right-radius: 8px;
                 border-bottom-right-radius: 8px;
             }
-    
+
+            .ytpa-badge {
+                border-radius: 8px;
+                padding: 0.2em;
+                font-size: 0.8em;
+                vertical-align: top;
+            }
+
             .ytpa-random-popover {
                 position: absolute;
                 border-radius: 8px;
@@ -2489,7 +2512,7 @@
                 --ytpa-playbtn-text: white;
             }
 
-            html[dark] .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
+            html[dark] :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
                 --ytpa-playbtn-uniquecolor: #2053b8;
                 --ytpa-playbtn-uniquecolor-hover: #2b66da;
                 --ytpa-playbtn-text: white;
@@ -2501,7 +2524,7 @@
                 --ytpa-playbtn-text: white;
             }
 
-            html:not([dark]) .ytpa-random-btn, .ytpa-random-notice, .ytpa-random-popover {
+            html:not([dark]) :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
                 --ytpa-playbtn-uniquecolor: #bad2ff;
                 --ytpa-playbtn-uniquecolor-hover: #3f60a1;
                 --ytpa-playbtn-text: white;
@@ -2521,35 +2544,52 @@
             }
 
             /* CLASSIC */
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-random-popover > a:visited, .ytpa-settings-btn) {
                 background-color: var(--ytpa-playbtn-uniquecolor);
                 color: var(--ytpa-playbtn-text);
             }
 
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn):hover {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn):hover {
                 background-color: var(--ytpa-playbtn-uniquecolor-hover);
             }
 
             /* ADAPTIVE */
-            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive) !important;
                 color: var(--ytpa-fg-primary) !important;
             }
-
+            
             /* ADAPTIVE OUTLINE */
-            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
 
-            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice) {
                 --thickness: 2px;
                 --translate: -2px;
                 transform: translate(var(--translate), var(--translate));
                 box-sizing: content-box;
                 border: var(--thickness) solid var(--ytpa-playbtn-uniquecolor);
             }
+
+            /* Multiple */
+            :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) .ytpa-random-popover {
+                background-color: var(--ytpa-bg-base);
+                color: var(--ytpa-fg-primary);
+            }
             
+            :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) :is(.ytpa-random-popover > *, .ytpa-random-popover > a:visited){
+                background-color: var(--ytpa-bg-additive);
+                color: var(--ytpa-fg-primary);
+            }
+            
+            :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) .ytpa-random-notice {
+                margin-left: 2px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
             ${ifUi(s.settings.button.show)} .ytpa-settings-btn {
                 display: flex !important;
             }

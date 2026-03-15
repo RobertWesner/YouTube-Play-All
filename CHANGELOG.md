@@ -1,5 +1,11 @@
 # YTPA Changelog
 
+## 20260315-0
+
+* Fix random play popover theming.
+* [#73](https://github.com/RobertWesner/YouTube-Play-All/issues/73) Fix issues with random play logic introduced by refactors in version 20251115-0.
+
+
 ## Infrastructure 2026-03-02
 
 * [#69](https://github.com/RobertWesner/YouTube-Play-All/issues/69) Add debugging information for failed tests.
