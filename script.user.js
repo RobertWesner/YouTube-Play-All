@@ -854,18 +854,29 @@
                     return;
                 }
 
-                const header = playlistContainer.querySelector('h3 a');//yt-simple-endpoint style-scope yt-formatted-string
-                header.innerHTML += ` <span class="ytpa-badge ytpa-random-badge">${ytpaRandom} <span style="font-size: 2rem; vertical-align: top">&times;</span></span>`;
+                const header = playlistContainer.querySelector('h3 a');
                 header.href = 'javascript:none';
-                header.querySelector('.ytpa-random-badge').addEventListener('click', event => {
-                    event.preventDefault();
+                header.insertAdjacentElement(
+                    'beforeend',
+                    $builder('span.ytpa-badge.ytpa-random-badge')
+                        .on('click', event => {
+                            event.preventDefault();
 
-                    localStorage.removeItem(getStorageKey());
+                            localStorage.removeItem(getStorageKey());
 
-                    let params = new URLSearchParams(location.search);
-                    params.delete('ytpa-random');
-                    window.location.href = `${window.location.pathname}?${params.toString()}`;
-                });
+                            const params = new URLSearchParams(location.search);
+                            params.delete('ytpa-random');
+                            window.location.href = `${window.location.pathname}?${params.toString()}`;
+                        })
+                        .onBuildAppend(
+                            ytpaRandom,
+                            $builder('span')
+                                .style('font-size: 2rem; vertical-align: top')
+                                .onBuildText('×')
+                                .build(),
+                        )
+                        .build(),
+                );
             }, 5000);
 
             if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
@@ -2604,6 +2615,15 @@
 
             ${ifUi(s.settings.button.show)} .ytpa-settings-btn {
                 display: flex !important;
+            }
+            
+            .ytpa-random-badge {
+                margin-left: 0.4em;
+            }
+
+            .ytpa-random-badge > span {
+                margin-left: 0.32em;
+                vertical-align: middle;
             }
         `],
         ['ytpa-dialog', /* language=css */ `
