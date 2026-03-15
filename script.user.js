@@ -168,7 +168,7 @@
 
         const tryFetch = async () => {
             try {
-                const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a')?.href)).text();
+                const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href)).text();
                 channelId = /var ytInitialData.+?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1] ?? '';
             } finally {
                 // pass
@@ -2240,35 +2240,42 @@
 }, () => {
     const s = G.s.ui;
     const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
+    const dark = '[dark], [darker-dark-theme]';
 
     return [
         ['ytpa-btn-height', ''],
         ['ytpa-base', /* language=css */ `
             html {
-                /* Keep these in mind for UI theming */
-                --ytpa-bg-base: var(--yt-spec-base-background);
-                --ytpa-bg-raised: var(--yt-spec-raised-background);
-                --ytpa-bg-menu: var(--yt-spec-menu-background);
-                --ytpa-bg-additive: var(--yt-spec-additive-background);
-                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse);
-                --ytpa-fg-primary: var(--yt-spec-text-primary);
-                --ytpa-fg-secondary: var(--yt-spec-text-secondary);
-                --ytpa-fg-disabled: var(--yt-spec-text-disabled);
-                --ytpa-cta: var(--yt-spec-call-to-action);
-                /*--yt-spec-overlay-button-primary:rgba(255,255,255,0.3);*/
-                /*--yt-spec-overlay-button-secondary:rgba(255,255,255,0.1);*/
-                /*--yt-spec-overlay-button-secondary-darker:rgba(255,255,255,0.2);*/
-                
                 --ytpa---base-1: rgba(255, 255, 255, 0.064);
                 --ytpa---base-2: rgba(0, 0, 0, 0.128);
             }
     
-            html[dark] {
+            html:is(${dark}) {
+                --ytpa-bg-base: var(--yt-spec-base-background, #0f0f0f);
+                --ytpa-bg-raised: var(--yt-spec-raised-background, #212121);
+                --ytpa-bg-menu: var(--yt-spec-menu-background, #282828);
+                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(255, 255, 255, 0.1));
+                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(0, 0, 0, 0.05));
+                --ytpa-fg-primary: var(--yt-spec-text-primary, #f1f1f1);
+                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #aaa);
+                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #717171);
+                --ytpa-cta: var(--yt-spec-call-to-action, #3ea6ff);
+
                 --ytpa-bg-additive-heavy: var(--ytpa---base-2);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
             }
     
-            html:not([dark]) {
+            html:not(:is(${dark})) {
+                --ytpa-bg-base: var(--yt-spec-base-background, #fff);
+                --ytpa-bg-raised: var(--yt-spec-raised-background, #fff);
+                --ytpa-bg-menu: var(--yt-spec-menu-background, #fff);
+                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(0, 0, 0, 0.05));
+                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(255, 255, 255, 0.1));
+                --ytpa-fg-primary: var(--yt-spec-text-primary, #0f0f0f);
+                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #606060);
+                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #909090);
+                --ytpa-cta: var(--yt-spec-call-to-action, #065fd4);
+    
                 --ytpa-bg-additive-heavy: var(--ytpa---base-1);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);
             }
@@ -2504,27 +2511,32 @@
                 border-radius: 100px !important;
                 margin-left: 1em !important;
             }
+            
+            /* Fix themes with button outlines on mobile */
+            ytm-feed-filter-chip-bar-renderer#filter-chip-bar > .chip-bar-contents.chip-bar-no-vertical-padding {
+                overflow: visible;
+            }
         `],
         ['ytpa-buttons', /* language=css */ `
-            html[dark] .ytpa-play-all-btn {
+            html:is(${dark}) .ytpa-play-all-btn {
                 --ytpa-playbtn-uniquecolor: #890097;
                 --ytpa-playbtn-uniquecolor-hover: #b247cc;
                 --ytpa-playbtn-text: white;
             }
 
-            html[dark] :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
+            html:is(${dark}) :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
                 --ytpa-playbtn-uniquecolor: #2053b8;
                 --ytpa-playbtn-uniquecolor-hover: #2b66da;
                 --ytpa-playbtn-text: white;
             }
 
-            html:not([dark]) .ytpa-play-all-btn {
+            html:not(:is(${dark})) .ytpa-play-all-btn {
                 --ytpa-playbtn-uniquecolor: #fac7ff;
                 --ytpa-playbtn-uniquecolor-hover: #eb8df1;
                 --ytpa-playbtn-text: white;
             }
 
-            html:not([dark]) :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
+            html:not(:is(${dark})) :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
                 --ytpa-playbtn-uniquecolor: #bad2ff;
                 --ytpa-playbtn-uniquecolor-hover: #3f60a1;
                 --ytpa-playbtn-text: white;
@@ -2848,6 +2860,10 @@
             
             .ytpa-btn-spacer ~ .ytpa-btn-spacer {
                 display: none !important;
+            }
+
+            ${ifUi(s.spacer.show)} ytm-rich-grid-renderer .ytpa-btn-spacer {
+                margin-left: 0.5em;
             }
         `],
     ];
