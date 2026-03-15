@@ -8,7 +8,7 @@ import Toppokki as T
 import Effect.Aff (Aff)
 import Data.Either (Either(..))
 import Lib.Info (info)
-import Lib.Helpers (ytpaSelector)
+import Lib.Helpers (timeout10min, ytpaSelector)
 import Control.Monad.Except (runExcept)
 import Foreign (isNull, isUndefined, readString)
 
@@ -33,7 +33,7 @@ step page label expected setup _ = do
     setup page
     info $ "[" <> label <> "] Testing for value \"" <> expected <> "\"..."
 
-    _ <- T.pageWaitForSelector (T.Selector ytpaSelector) {} page
+    _ <- T.pageWaitForSelector (T.Selector ytpaSelector) { timeout: timeout10min } page
     val <- T.unsafeEvaluateStringFunction ("document.querySelector('" <> ytpaSelector <> "')?.href") page
     if isNull val || isUndefined val then
         fail' "querySelector failed"
