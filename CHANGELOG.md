@@ -1,5 +1,12 @@
 # YTPA Changelog
 
+## 20260322-0
+
+Slight stability improvements.
+
+* Added an interval even on desktop environments to counteract unreliable navigation events and race conditions.
+
+
 ## 20260315-0
 
 Simple bugfix release.

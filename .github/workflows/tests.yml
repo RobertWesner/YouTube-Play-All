@@ -34,7 +34,7 @@ jobs:
 
             -   name: Upload debug artifact on failure
                 if: env.EXIT_CODE != '0'
-                uses: actions/upload-artifact@v4
+                uses: actions/upload-artifact@v5
                 with:
                     name: debug
                     path: debug_out

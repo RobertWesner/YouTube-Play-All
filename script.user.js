@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260315-0
+// @version         20260322-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -489,6 +489,10 @@
     } else {
         safeEventListener(window, 'yt-navigate-start', removeButton);
         safeEventListener(window, 'yt-navigate-finish', addButton);
+        // [2026-03-22] YouTube does not seem to consistently fire navigation.
+        // This also is an attempt against race conditions.
+        // The performance impact is negligible due to early returns.
+        safeInterval(addButton, 3000);
     }
 
     // Fallback playlist emulation
