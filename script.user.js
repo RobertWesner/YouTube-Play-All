@@ -169,10 +169,10 @@
         const tryFetch = async () => {
             try {
                 const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href)).text();
-                channelId = null
+                channelId =
                     // #77 added multiple attempts at gathering the actual channelId without accidentally matching unrelated channels
                     // primarily expect channelId with greedy matching space after `"subscribeButton"`
-                    ?? /var ytInitialData.+?["']subscribeButton["']:.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    /var ytInitialData.+?["']subscribeButton["']:.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
                     // if structure changes, still prioritize channelId following `Subscribe`
                     ?? /var ytInitialData.+?[Ss]ubscribe.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
                     // when all things fail, use the old attempt to match any channelId, can cause false links (see #77)
@@ -752,7 +752,7 @@
             });
         };
         const getStorage = (allowEmpty = false) => {
-            let value = localStorage.getItem(getStorageKey());
+            const value = localStorage.getItem(getStorageKey());
             if (!value) {
                 if (allowEmpty) {
                     return {};
