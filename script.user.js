@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260322-0
+// @version         20260508-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -215,7 +215,7 @@
     let currentSelection = null;
 
     const apply = () => {
-        const container = document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer, chip-bar-view-model.ytChipBarViewModelHost');
+        const container = document.querySelector('ytm-feed-filter-chip-bar-renderer, ytd-feed-filter-chip-bar-renderer, ytd-browse chip-bar-view-model.ytChipBarViewModelHost');
         let height = 32;
         if (container !== null) {
             const computedStyle = getComputedStyle(container);
@@ -232,7 +232,7 @@
             // mobile view
             ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
-            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, chip-bar-view-model.ytChipBarViewModelHost');
+            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, ytd-browse chip-bar-view-model.ytChipBarViewModelHost');
 
         // 202602 New UI
         if (parent?.tagName?.toLowerCase() === 'chip-bar-view-model') {
@@ -1488,14 +1488,14 @@
              * Compatible with the new members-only UI.
              */
             getTypeButtons: async () => new Promise((resolve) => {
-                const dropdownButton = document.querySelector('chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)');
+                const dropdownButton = document.querySelector('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)');
                 if (dropdownButton) {
                     dropdownButton.addEventListener('click', () => {
                         waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model')
                             .then(element => resolve(element.querySelectorAll('yt-list-item-view-model')))
                     });
                 } else {
-                    resolve(document.querySelectorAll('chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
+                    resolve(document.querySelectorAll('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
                 }
             }),
         };
