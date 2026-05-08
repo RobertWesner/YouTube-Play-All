@@ -1,5 +1,13 @@
 # YTPA Changelog
 
+## v20260508-0
+
+Small stability fixes.
+
+* [#76](https://github.com/RobertWesner/YouTube-Play-All/issues/76) Harden selectors for desktop button parent.
+* [#77](https://github.com/RobertWesner/YouTube-Play-All/issues/77) Add more reliable regular expressions for gathering channelId.
+
+
 ## 20260322-0
 
 Slight stability improvements.
