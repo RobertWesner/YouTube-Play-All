@@ -188,6 +188,16 @@ script page' = do
                 waitForAndClick btnDropdownMenuLatestSelector page
                 delay (Milliseconds 500.0)
         )
+        >>= step' "videos-after-watch-channel-navigation" "https://www.youtube.com/playlist?list=UULFRC6cNamj9tYAO6h_RXd5xA&playnext=1" (
+            \page -> do
+                waitForClearScreen page
+                T.goto (T.URL "https://www.youtube.com/watch?v=4-V1_0xHoV4") page
+                delay (Milliseconds 500.0)
+                waitForAndClick "#top-row #owner a:has(img)" page
+                delay (Milliseconds 500.0)
+                waitForAndClick "yt-tab-shape[tab-title=\"Videos\"]" page
+                delay (Milliseconds 500.0)
+        )
 
     case result of
         Left err -> do
