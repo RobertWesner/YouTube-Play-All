@@ -121,7 +121,7 @@
 
     // --- actual code ---
 
-    const ytpaBtnSelectedAttribute = 'data-ytpa-selected';
+    const ytpaBtnSelectedAttribute = 'data-ytpa-button-selection-detection-selected';
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -239,9 +239,9 @@
 
         let parent = location.host === 'm.youtube.com'
             // mobile view
-            ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
+            ? document.querySelector('ytm-browse:not([hidden]) chip-bar-view-model.ytChipBarViewModelHost, ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
-            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, ytd-browse chip-bar-view-model.ytChipBarViewModelHost');
+            : document.querySelector('ytd-browse:not([hidden]) chip-bar-view-model.ytChipBarViewModelHost, ytd-feed-filter-chip-bar-renderer iron-selector#chips');
 
         // 202602 New UI
         if (parent?.tagName?.toLowerCase() === 'chip-bar-view-model') {
@@ -251,16 +251,22 @@
 
             // 20260220-0 See #56
             Versioned.v20260220.getTypeButtons().then(
-                elements => elements.forEach((btn, i) => btn.addEventListener('click', () => {
-                    // this stupid variable is necessary because YouTube keeps erasing DOM mutations
-                    currentSelection = i + 1;
+                elements => elements.forEach((btn, i) => {
+                    const attribute = 'data-ytpa-current-selection-click-listener-attached';
+                    if (btn.hasAttribute(attribute)) return;
 
-                    // this is also necessary, even if it gets late erased, so it can detect what is selected in addButton()
-                    document.querySelectorAll(`[${ytpaBtnSelectedAttribute}]`).forEach(it => it.removeAttribute(ytpaBtnSelectedAttribute))
-                    btn.setAttribute(ytpaBtnSelectedAttribute, '');
+                    btn.setAttribute(attribute, '');
+                    btn.addEventListener('click', () => {
+                        // this stupid variable is necessary because YouTube keeps erasing DOM mutations
+                        currentSelection = i + 1;
 
-                    // none if these make me happy
-                })),
+                        // this is also necessary, even if it gets late erased, so it can detect what is selected in addButton()
+                        document.querySelectorAll(`[${ytpaBtnSelectedAttribute}]`).forEach(it => it.removeAttribute(ytpaBtnSelectedAttribute))
+                        btn.setAttribute(ytpaBtnSelectedAttribute, '');
+
+                        // none of these make me happy
+                    })
+                }),
             );
 
             // TODO: refine this into handling "members only"/"popular" for those specific playlists! See documentation
@@ -318,7 +324,7 @@
             return `/playlist?list=${playlist}${id}&playnext=1`;
         };
 
-        if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
+        if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected, .ytChipBarViewModelChipBarScrollContainer > :nth-child(1):has([aria-selected="true"])') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
@@ -326,7 +332,7 @@
                     .onBuildAppend(allText)
                     .build(),
             );
-        } else if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
+        } else if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected, .ytChipBarViewModelChipBarScrollContainer > :nth-child(2):has([aria-selected="true"])')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
@@ -457,7 +463,7 @@
 
         currentSelection = null;
 
-        const buttonsToCheck = document.querySelector('ytd-browse #header .ytChipBarViewModelChipBarScrollContainer')?.children;
+        const buttonsToCheck = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) .ytChipBarViewModelChipBarScrollContainer')?.children;
         if (buttonsToCheck) {
             const selectedButtonIndex = Array.from(buttonsToCheck)?.map(child => child.hasAttribute(ytpaBtnSelectedAttribute) || !!child.querySelector('[aria-selected="true"]'))?.indexOf(true);
             if (selectedButtonIndex !== null) {
@@ -468,7 +474,7 @@
         // Regenerate button if switched between Latest and Popular
         if (location.host === 'm.youtube.com') {
             // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
-            Array.from(document.querySelectorAll('ytm-feed-filter-chip-bar-renderer ytm-chip-cloud-chip-renderer'))
+            Array.from(document.querySelectorAll('ytm-browse:not([hidden]) ytm-rich-grid-renderer .ytChipBarViewModelChipWrapper, ytm-feed-filter-chip-bar-renderer ytm-chip-cloud-chip-renderer'))
                 .filter(element => !element.hasAttribute('data-ytpa-click-listener-attached'))
                 .forEach(
                     element => {
@@ -1514,14 +1520,14 @@
              * Compatible with the new members-only UI.
              */
             getTypeButtons: async () => new Promise((resolve) => {
-                const dropdownButton = document.querySelector('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)');
+                const dropdownButton = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd) button');
                 if (dropdownButton) {
                     dropdownButton.addEventListener('click', () => {
                         waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model')
                             .then(element => resolve(element.querySelectorAll('yt-list-item-view-model')))
                     });
                 } else {
-                    resolve(document.querySelectorAll('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
+                    resolve(document.querySelectorAll(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper button'));
                 }
             }),
         };

@@ -4,6 +4,8 @@
 
 * [#80](https://github.com/RobertWesner/YouTube-Play-All/issues/80) Use new `--yt-sys` CSS variables with fallback to old `--yt-spec`.
 * [#81](https://github.com/RobertWesner/YouTube-Play-All/issues/81) Improved detection of currently selected button, working around YouTube constantly unselecting it and erasing modifications.
+* [#82](https://github.com/RobertWesner/YouTube-Play-All/issues/82) Update mobile mode to support new UI.
+* Miscellaneous improvements to stability and performance.
 
 
 ## v20260508-0
