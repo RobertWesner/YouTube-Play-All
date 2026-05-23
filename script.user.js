@@ -159,24 +159,38 @@
 
     let id = '';
 
+    const idPerVideoCache = {};
+
     // This looks funny, but is currently (2025) the
     // most reliable way to fetch the channelId from within the browser context
     const refreshId = async () => {
         let channelId = '';
 
-        const pass = () => /UC[\w-]+/.test(channelId);
+        const pass = () => {
+            return /UC[\w-]+/.test(channelId);
+        }
 
         const tryFetch = async () => {
+            const href = document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href;
+
+            // prevent network spam
+            if (href in idPerVideoCache) {
+                channelId = idPerVideoCache[href];
+
+                return;
+            }
+
             try {
-                const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href)).text();
-                channelId =
+                // [20260523-0] \x22 is necessary for mobile because for some reason there the JSON is serliazed into a string, yep
+                const html = await (await fetch(href)).text();
+                idPerVideoCache[href] = channelId =
                     // #77 added multiple attempts at gathering the actual channelId without accidentally matching unrelated channels
                     // primarily expect channelId with greedy matching space after `"subscribeButton"`
-                    /var ytInitialData.+?["']subscribeButton["']:.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    /var ytInitialData.+?(?:"|'|\\x22)subscribeButton(?:"|'|\\x22):.*?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // if structure changes, still prioritize channelId following `Subscribe`
-                    ?? /var ytInitialData.+?[Ss]ubscribe.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    ?? /var ytInitialData.+?[Ss]ubscribe.*?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // when all things fail, use the old attempt to match any channelId, can cause false links (see #77)
-                    ?? /var ytInitialData.+?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    ?? /var ytInitialData.+?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // otherwise use less reliable fallbacks below
                     ?? '';
             } finally {
@@ -324,7 +338,7 @@
             return `/playlist?list=${playlist}${id}&playnext=1`;
         };
 
-        if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected, .ytChipBarViewModelChipBarScrollContainer > :nth-child(1):has([aria-selected="true"])') || parent.classList.contains('ytpa-button-container')) {
+        if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
@@ -332,7 +346,7 @@
                     .onBuildAppend(allText)
                     .build(),
             );
-        } else if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected, .ytChipBarViewModelChipBarScrollContainer > :nth-child(2):has([aria-selected="true"])')) {
+        } else if (currentSelection === 2 || parent.querySelector(':nth-child(2).selected, :nth-child(2).iron-selected')) {
             parent.insertAdjacentElement(
                 'beforeend',
                 $builder('a.ytpa-btn.ytpa-play-all-btn[role="button"]')
