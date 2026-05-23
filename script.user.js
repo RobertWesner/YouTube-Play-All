@@ -480,7 +480,7 @@
         const buttonsToCheck = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) .ytChipBarViewModelChipBarScrollContainer')?.children;
         if (buttonsToCheck) {
             const selectedButtonIndex = Array.from(buttonsToCheck)?.map(child => child.hasAttribute(ytpaBtnSelectedAttribute) || !!child.querySelector('[aria-selected="true"]'))?.indexOf(true);
-            if (selectedButtonIndex !== null) {
+            if (selectedButtonIndex !== null && selectedButtonIndex !== -1) {
                 currentSelection = selectedButtonIndex + 1;
             }
         }
