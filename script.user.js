@@ -278,6 +278,12 @@
                         document.querySelectorAll(`[${ytpaBtnSelectedAttribute}]`).forEach(it => it.removeAttribute(ytpaBtnSelectedAttribute))
                         btn.setAttribute(ytpaBtnSelectedAttribute, '');
 
+                        // mobile needs to force rebuild the buttons, because you can't detect any changes there
+                        if (location.host === 'm.youtube.com') {
+                            removeButton();
+                            apply();
+                        }
+
                         // none of these make me happy
                     })
                 }),
@@ -478,7 +484,7 @@
         currentSelection = null;
 
         const buttonsToCheck = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) .ytChipBarViewModelChipBarScrollContainer')?.children;
-        if (buttonsToCheck) {
+        if (buttonsToCheck && !buttonsToCheck[0].querySelector('button[role="combobox"]')) {
             const selectedButtonIndex = Array.from(buttonsToCheck)?.map(child => child.hasAttribute(ytpaBtnSelectedAttribute) || !!child.querySelector('[aria-selected="true"]'))?.indexOf(true);
             if (selectedButtonIndex !== null && selectedButtonIndex !== -1) {
                 currentSelection = selectedButtonIndex + 1;
@@ -486,20 +492,8 @@
         }
 
         // Regenerate button if switched between Latest and Popular
-        if (location.host === 'm.youtube.com') {
-            // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
-            Array.from(document.querySelectorAll('ytm-browse:not([hidden]) ytm-rich-grid-renderer .ytChipBarViewModelChipWrapper, ytm-feed-filter-chip-bar-renderer ytm-chip-cloud-chip-renderer'))
-                .filter(element => !element.hasAttribute('data-ytpa-click-listener-attached'))
-                .forEach(
-                    element => {
-                        element.setAttribute('data-ytpa-click-listener-attached', '');
-                        element.addEventListener('click', () => {
-                            removeButton();
-                            apply();
-                        });
-                    },
-                );
-        } else {
+        // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
+        if (location.host !== 'm.youtube.com') {
             const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer');
             if (element) {
                 observer.observe(element, {
@@ -1534,10 +1528,10 @@
              * Compatible with the new members-only UI.
              */
             getTypeButtons: async () => new Promise((resolve) => {
-                const dropdownButton = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd) button');
+                const dropdownButton = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost button[role="combobox"]');
                 if (dropdownButton) {
                     dropdownButton.addEventListener('click', () => {
-                        waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model')
+                        waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model, bottom-sheet-container[role="dialog"]:not([hidden]) yt-sheet-view-model')
                             .then(element => resolve(element.querySelectorAll('yt-list-item-view-model')))
                     });
                 } else {
@@ -2368,6 +2362,7 @@
                 padding: 0 0.5em;
                 /*noinspection CssUnresolvedCustomProperty*/
                 height: var(--ytpa-btn-height);
+                white-space: nowrap;
             }
     
             .ytpa-btn, .ytpa-btn > * {
