@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260508-0
+// @version         20260523-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -2286,30 +2286,30 @@
             }
     
             html:is(${dark}) {
-                --ytpa-bg-base: var(--yt-spec-base-background, #0f0f0f);
-                --ytpa-bg-raised: var(--yt-spec-raised-background, #212121);
-                --ytpa-bg-menu: var(--yt-spec-menu-background, #282828);
-                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(255, 255, 255, 0.1));
-                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(0, 0, 0, 0.05));
-                --ytpa-fg-primary: var(--yt-spec-text-primary, #f1f1f1);
-                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #aaa);
-                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #717171);
-                --ytpa-cta: var(--yt-spec-call-to-action, #3ea6ff);
+                --ytpa-bg-base: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #0f0f0f));
+                --ytpa-bg-raised: var(--yt-sys-color-baseline--raised-background, var(--yt-spec-raised-background, #212121));
+                --ytpa-bg-menu: var(--yt-sys-color-baseline--menu-background, var(--yt-spec-menu-background, #282828));
+                --ytpa-bg-additive: var(--yt-sys-color-baseline--additive-background, var(--yt-spec-additive-background, rgba(255, 255, 255, 0.1)));
+                --ytpa-bg-additive-inverse: var(--yt-sys-color-baseline--additive-background-inverse, var(--yt-spec-additive-background-inverse, rgba(0, 0, 0, 0.05)));
+                --ytpa-fg-primary: var(--yt-sys-color-baseline--text-primary, var(--yt-spec-text-primary, #f1f1f1));
+                --ytpa-fg-secondary: var(--yt-sys-color-baseline--text-secondary, var(--yt-spec-text-secondary, #aaa));
+                --ytpa-fg-disabled: var(--yt-sys-color-baseline--text-disabled, var(--yt-spec-text-disabled, #717171));
+                --ytpa-cta: var(--yt-sys-color-baseline--call-to-action, var(--yt-spec-call-to-action, #3ea6ff));
 
                 --ytpa-bg-additive-heavy: var(--ytpa---base-2);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
             }
     
             html:not(:is(${dark})) {
-                --ytpa-bg-base: var(--yt-spec-base-background, #fff);
-                --ytpa-bg-raised: var(--yt-spec-raised-background, #fff);
-                --ytpa-bg-menu: var(--yt-spec-menu-background, #fff);
-                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(0, 0, 0, 0.05));
-                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(255, 255, 255, 0.1));
-                --ytpa-fg-primary: var(--yt-spec-text-primary, #0f0f0f);
-                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #606060);
-                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #909090);
-                --ytpa-cta: var(--yt-spec-call-to-action, #065fd4);
+                --ytpa-bg-base: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #fff));
+                --ytpa-bg-raised: var(--yt-sys-color-baseline--raised-background, var(--yt-spec-raised-background, #fff));
+                --ytpa-bg-menu: var(--yt-sys-color-baseline--menu-background, var(--yt-spec-menu-background, #fff));
+                --ytpa-bg-additive: var(--yt-sys-color-baseline--additive-background, var(--yt-spec-additive-background, rgba(0, 0, 0, 0.05)));
+                --ytpa-bg-additive-inverse: var(--yt-sys-color-baseline--additive-background-inverse, var(--yt-spec-additive-background-inverse, rgba(255, 255, 255, 0.1)));
+                --ytpa-fg-primary: var(--yt-sys-color-baseline--text-primary, var(--yt-spec-text-primary, #0f0f0f));
+                --ytpa-fg-secondary: var(--yt-sys-color-baseline--text-secondary, var(--yt-spec-text-secondary, #606060));
+                --ytpa-fg-disabled: var(--yt-sys-color-baseline--text-disabled, var(--yt-spec-text-disabled, #909090));
+                --ytpa-cta: var(--yt-sys-color-baseline--call-to-action, var(--yt-spec-call-to-action, #065fd4));
     
                 --ytpa-bg-additive-heavy: var(--ytpa---base-1);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);

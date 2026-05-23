@@ -1,5 +1,10 @@
 # YTPA Changelog
 
+## v20260523-0
+
+* [#80](https://github.com/RobertWesner/YouTube-Play-All/issues/80) Use new `--yt-sys` CSS variables with fallback to old `--yt-spec`.
+
+
 ## v20260508-0
 
 Small stability fixes.
