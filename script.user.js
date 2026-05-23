@@ -41,8 +41,6 @@
 // GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
 
-// TODO: REALLY have to test all of this on mobile, been a while
-
 (G => (async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
 
@@ -122,6 +120,8 @@
     const settingsData = SettingsStorage.data();
 
     // --- actual code ---
+
+    const ytpaBtnSelectedAttribute = 'data-ytpa-selected';
 
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
@@ -251,7 +251,16 @@
 
             // 20260220-0 See #56
             Versioned.v20260220.getTypeButtons().then(
-                elements => elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1)),
+                elements => elements.forEach((btn, i) => btn.addEventListener('click', () => {
+                    // this stupid variable is necessary because YouTube keeps erasing DOM mutations
+                    currentSelection = i + 1;
+
+                    // this is also necessary, even if it gets late erased, so it can detect what is selected in addButton()
+                    document.querySelectorAll(`[${ytpaBtnSelectedAttribute}]`).forEach(it => it.removeAttribute(ytpaBtnSelectedAttribute))
+                    btn.setAttribute(ytpaBtnSelectedAttribute, '');
+
+                    // none if these make me happy
+                })),
             );
 
             // TODO: refine this into handling "members only"/"popular" for those specific playlists! See documentation
@@ -447,6 +456,14 @@
         await refreshId();
 
         currentSelection = null;
+
+        const buttonsToCheck = document.querySelector('ytd-browse #header .ytChipBarViewModelChipBarScrollContainer')?.children;
+        if (buttonsToCheck) {
+            const selectedButtonIndex = Array.from(buttonsToCheck)?.map(child => child.hasAttribute(ytpaBtnSelectedAttribute) || !!child.querySelector('[aria-selected="true"]'))?.indexOf(true);
+            if (selectedButtonIndex !== null) {
+                currentSelection = selectedButtonIndex + 1;
+            }
+        }
 
         // Regenerate button if switched between Latest and Popular
         if (location.host === 'm.youtube.com') {
