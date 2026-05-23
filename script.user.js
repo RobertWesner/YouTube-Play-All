@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260508-0
+// @version         20260523-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -40,8 +40,6 @@
 //
 // GDPR privacy information: https://datenschutz.robertwesner.de/dataprotection
 // Source of the API: https://github.com/RobertWesner/youtube-playlist
-
-// TODO: REALLY have to test all of this on mobile, been a while
 
 (G => (async function __ytpa_root_call__(loadModules, loadStyles) {
     'use strict';
@@ -123,6 +121,8 @@
 
     // --- actual code ---
 
+    const ytpaBtnSelectedAttribute = 'data-ytpa-button-selection-detection-selected';
+
     const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
 
     /**
@@ -159,24 +159,38 @@
 
     let id = '';
 
+    const idPerVideoCache = {};
+
     // This looks funny, but is currently (2025) the
     // most reliable way to fetch the channelId from within the browser context
     const refreshId = async () => {
         let channelId = '';
 
-        const pass = () => /UC[\w-]+/.test(channelId);
+        const pass = () => {
+            return /UC[\w-]+/.test(channelId);
+        }
 
         const tryFetch = async () => {
+            const href = document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href;
+
+            // prevent network spam
+            if (href in idPerVideoCache) {
+                channelId = idPerVideoCache[href];
+
+                return;
+            }
+
             try {
-                const html = await (await fetch(document.querySelector('#content ytd-rich-item-renderer a, .rich-grid-renderer-contents a.YtmCompactMediaItemImage')?.href)).text();
-                channelId =
+                // [20260523-0] \x22 is necessary for mobile because for some reason there the JSON is serliazed into a string, yep
+                const html = await (await fetch(href)).text();
+                idPerVideoCache[href] = channelId =
                     // #77 added multiple attempts at gathering the actual channelId without accidentally matching unrelated channels
                     // primarily expect channelId with greedy matching space after `"subscribeButton"`
-                    /var ytInitialData.+?["']subscribeButton["']:.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    /var ytInitialData.+?(?:"|'|\\x22)subscribeButton(?:"|'|\\x22):.*?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // if structure changes, still prioritize channelId following `Subscribe`
-                    ?? /var ytInitialData.+?[Ss]ubscribe.*?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    ?? /var ytInitialData.+?[Ss]ubscribe.*?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // when all things fail, use the old attempt to match any channelId, can cause false links (see #77)
-                    ?? /var ytInitialData.+?["']channelId["']:["'](UC[\w-]+)["']/.exec(html)?.[1]
+                    ?? /var ytInitialData.+?(?:"|'|\\x22)channelId(?:"|'|\\x22):(?:"|'|\\x22)(UC[\w-]+)(?:"|'|\\x22)/.exec(html)?.[1]
                     // otherwise use less reliable fallbacks below
                     ?? '';
             } finally {
@@ -239,9 +253,9 @@
 
         let parent = location.host === 'm.youtube.com'
             // mobile view
-            ? document.querySelector('ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
+            ? document.querySelector('ytm-browse:not([hidden]) chip-bar-view-model.ytChipBarViewModelHost, ytm-feed-filter-chip-bar-renderer .chip-bar-contents, ytm-feed-filter-chip-bar-renderer > div')
             // desktop view
-            : document.querySelector('ytd-feed-filter-chip-bar-renderer iron-selector#chips, ytd-browse chip-bar-view-model.ytChipBarViewModelHost');
+            : document.querySelector('ytd-browse:not([hidden]) chip-bar-view-model.ytChipBarViewModelHost, ytd-feed-filter-chip-bar-renderer iron-selector#chips');
 
         // 202602 New UI
         if (parent?.tagName?.toLowerCase() === 'chip-bar-view-model') {
@@ -251,7 +265,28 @@
 
             // 20260220-0 See #56
             Versioned.v20260220.getTypeButtons().then(
-                elements => elements.forEach((btn, i) => btn.addEventListener('click', () => currentSelection = i + 1)),
+                elements => elements.forEach((btn, i) => {
+                    const attribute = 'data-ytpa-current-selection-click-listener-attached';
+                    if (btn.hasAttribute(attribute)) return;
+
+                    btn.setAttribute(attribute, '');
+                    btn.addEventListener('click', () => {
+                        // this stupid variable is necessary because YouTube keeps erasing DOM mutations
+                        currentSelection = i + 1;
+
+                        // this is also necessary, even if it gets late erased, so it can detect what is selected in addButton()
+                        document.querySelectorAll(`[${ytpaBtnSelectedAttribute}]`).forEach(it => it.removeAttribute(ytpaBtnSelectedAttribute))
+                        btn.setAttribute(ytpaBtnSelectedAttribute, '');
+
+                        // mobile needs to force rebuild the buttons, because you can't detect any changes there
+                        if (location.host === 'm.youtube.com') {
+                            removeButton();
+                            apply();
+                        }
+
+                        // none of these make me happy
+                    })
+                }),
             );
 
             // TODO: refine this into handling "members only"/"popular" for those specific playlists! See documentation
@@ -448,21 +483,17 @@
 
         currentSelection = null;
 
+        const buttonsToCheck = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) .ytChipBarViewModelChipBarScrollContainer')?.children;
+        if (buttonsToCheck && !buttonsToCheck[0].querySelector('button[role="combobox"]')) {
+            const selectedButtonIndex = Array.from(buttonsToCheck)?.map(child => child.hasAttribute(ytpaBtnSelectedAttribute) || !!child.querySelector('[aria-selected="true"]'))?.indexOf(true);
+            if (selectedButtonIndex !== null && selectedButtonIndex !== -1) {
+                currentSelection = selectedButtonIndex + 1;
+            }
+        }
+
         // Regenerate button if switched between Latest and Popular
-        if (location.host === 'm.youtube.com') {
-            // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
-            Array.from(document.querySelectorAll('ytm-feed-filter-chip-bar-renderer ytm-chip-cloud-chip-renderer'))
-                .filter(element => !element.hasAttribute('data-ytpa-click-listener-attached'))
-                .forEach(
-                    element => {
-                        element.setAttribute('data-ytpa-click-listener-attached', '');
-                        element.addEventListener('click', () => {
-                            removeButton();
-                            apply();
-                        });
-                    },
-                );
-        } else {
+        // Mobile needs custom click listeners as mutation observers proved to be unreliable in that UI.
+        if (location.host !== 'm.youtube.com') {
             const element = document.querySelector('ytd-browse:not([hidden]) ytd-rich-grid-renderer');
             if (element) {
                 observer.observe(element, {
@@ -1497,14 +1528,14 @@
              * Compatible with the new members-only UI.
              */
             getTypeButtons: async () => new Promise((resolve) => {
-                const dropdownButton = document.querySelector('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper:has(.ytIconWrapperHost.ytChipShapeIconEnd)');
+                const dropdownButton = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost button[role="combobox"]');
                 if (dropdownButton) {
                     dropdownButton.addEventListener('click', () => {
-                        waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model')
+                        waitForElement('tp-yt-iron-dropdown.style-scope.ytd-popup-container:not([hidden], [style*="display: none"]) yt-sheet-view-model, bottom-sheet-container[role="dialog"]:not([hidden]) yt-sheet-view-model')
                             .then(element => resolve(element.querySelectorAll('yt-list-item-view-model')))
                     });
                 } else {
-                    resolve(document.querySelectorAll('ytd-browse chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper'));
+                    resolve(document.querySelectorAll(':is(ytd-browse, ytm-browse):not([hidden]) chip-bar-view-model.ytChipBarViewModelHost div.ytChipBarViewModelChipWrapper button'));
                 }
             }),
         };
@@ -2286,30 +2317,30 @@
             }
     
             html:is(${dark}) {
-                --ytpa-bg-base: var(--yt-spec-base-background, #0f0f0f);
-                --ytpa-bg-raised: var(--yt-spec-raised-background, #212121);
-                --ytpa-bg-menu: var(--yt-spec-menu-background, #282828);
-                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(255, 255, 255, 0.1));
-                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(0, 0, 0, 0.05));
-                --ytpa-fg-primary: var(--yt-spec-text-primary, #f1f1f1);
-                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #aaa);
-                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #717171);
-                --ytpa-cta: var(--yt-spec-call-to-action, #3ea6ff);
+                --ytpa-bg-base: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #0f0f0f));
+                --ytpa-bg-raised: var(--yt-sys-color-baseline--raised-background, var(--yt-spec-raised-background, #212121));
+                --ytpa-bg-menu: var(--yt-sys-color-baseline--menu-background, var(--yt-spec-menu-background, #282828));
+                --ytpa-bg-additive: var(--yt-sys-color-baseline--additive-background, var(--yt-spec-additive-background, rgba(255, 255, 255, 0.1)));
+                --ytpa-bg-additive-inverse: var(--yt-sys-color-baseline--additive-background-inverse, var(--yt-spec-additive-background-inverse, rgba(0, 0, 0, 0.05)));
+                --ytpa-fg-primary: var(--yt-sys-color-baseline--text-primary, var(--yt-spec-text-primary, #f1f1f1));
+                --ytpa-fg-secondary: var(--yt-sys-color-baseline--text-secondary, var(--yt-spec-text-secondary, #aaa));
+                --ytpa-fg-disabled: var(--yt-sys-color-baseline--text-disabled, var(--yt-spec-text-disabled, #717171));
+                --ytpa-cta: var(--yt-sys-color-baseline--call-to-action, var(--yt-spec-call-to-action, #3ea6ff));
 
                 --ytpa-bg-additive-heavy: var(--ytpa---base-2);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-1);
             }
     
             html:not(:is(${dark})) {
-                --ytpa-bg-base: var(--yt-spec-base-background, #fff);
-                --ytpa-bg-raised: var(--yt-spec-raised-background, #fff);
-                --ytpa-bg-menu: var(--yt-spec-menu-background, #fff);
-                --ytpa-bg-additive: var(--yt-spec-additive-background, rgba(0, 0, 0, 0.05));
-                --ytpa-bg-additive-inverse: var(--yt-spec-additive-background-inverse, rgba(255, 255, 255, 0.1));
-                --ytpa-fg-primary: var(--yt-spec-text-primary, #0f0f0f);
-                --ytpa-fg-secondary: var(--yt-spec-text-secondary, #606060);
-                --ytpa-fg-disabled: var(--yt-spec-text-disabled, #909090);
-                --ytpa-cta: var(--yt-spec-call-to-action, #065fd4);
+                --ytpa-bg-base: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #fff));
+                --ytpa-bg-raised: var(--yt-sys-color-baseline--raised-background, var(--yt-spec-raised-background, #fff));
+                --ytpa-bg-menu: var(--yt-sys-color-baseline--menu-background, var(--yt-spec-menu-background, #fff));
+                --ytpa-bg-additive: var(--yt-sys-color-baseline--additive-background, var(--yt-spec-additive-background, rgba(0, 0, 0, 0.05)));
+                --ytpa-bg-additive-inverse: var(--yt-sys-color-baseline--additive-background-inverse, var(--yt-spec-additive-background-inverse, rgba(255, 255, 255, 0.1)));
+                --ytpa-fg-primary: var(--yt-sys-color-baseline--text-primary, var(--yt-spec-text-primary, #0f0f0f));
+                --ytpa-fg-secondary: var(--yt-sys-color-baseline--text-secondary, var(--yt-spec-text-secondary, #606060));
+                --ytpa-fg-disabled: var(--yt-sys-color-baseline--text-disabled, var(--yt-spec-text-disabled, #909090));
+                --ytpa-cta: var(--yt-sys-color-baseline--call-to-action, var(--yt-spec-call-to-action, #065fd4));
     
                 --ytpa-bg-additive-heavy: var(--ytpa---base-1);
                 --ytpa-bg-additive-inverse-heavy: var(--ytpa---base-2);
@@ -2331,6 +2362,7 @@
                 padding: 0 0.5em;
                 /*noinspection CssUnresolvedCustomProperty*/
                 height: var(--ytpa-btn-height);
+                white-space: nowrap;
             }
     
             .ytpa-btn, .ytpa-btn > * {
