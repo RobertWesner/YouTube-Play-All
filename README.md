@@ -146,7 +146,7 @@ Or your other docker-compatible container environment of choice.
 To run the automated tests directly, you will need the following tools:
 
 - npm `11.6.2`
-- spago `0.93.44` (get the npm install `spago@next` instead of AUR or other repository)
+- spago `0.93.44` (get the npm install `spago@latest` instead of AUR or other repository)
 - Purescript purs `0.15.15`
 
 Install/Update Chrome

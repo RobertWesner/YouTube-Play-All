@@ -1,6 +1,11 @@
 # YTPA Changelog
 
-## v20260523-0
+## Infrastructure 2026-08-09
+
+* Update testing dependencies and temporarily disable a minor failing test caused by YouTube bot detection.
+
+
+## 20260523-0
 
 Updates to keep up with YouTube's recent changes.
 
@@ -11,7 +16,7 @@ Updates to keep up with YouTube's recent changes.
 * Reduce network spam caused by YouTube's bad mobile code.
 
 
-## v20260508-0
+## 20260508-0
 
 Small stability fixes.
 
