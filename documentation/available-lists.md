@@ -127,6 +127,21 @@ Is it just the private version of FL?
 **E**mpty **L**ist? It does not show an error when empty unlike all other lists.
 
 
+## Reversed Playlist¹ | More videos from \<user name>
+
+Mixed content played in reverse, similar to `UU`.
+These are not prefixes, they are exact list slugs and work the same on all videos,
+playing the uploads of a channel based on the currently playing video.
+
+Example: [?v=0UKCUMghTrc&list=UL01234567890](https://www.youtube.com/watch?v=0UKCUMghTrc&list=UL01234567890)
+
+Known slugs:
+
+- ULcxqQ59vzyTk
+- UL01234567890
+
+Seems to require exact matches, not arbitrary slugs. For example: `ULaaaaaaaaaaa` does not work.
+
 ---
 
 ¹ Unviewable playlist: Cannot be directly be viewed in `/playlist` but works in `/watch`
