@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20261110-0-rc1
+// @version         20261110-0-rc2
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -964,25 +964,7 @@
                 params.delete('ytpa-random-initial');
                 window.location.href = `${window.location.pathname}?${params.toString()}`;
             } else {
-                // TODO: refactor to the new redirect() function
-                const redirector = document.createElement('a');
-                redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
-                redirector.setAttribute('hidden', '');
-                redirector.data = {
-                    'commandMetadata': {
-                        'webCommandMetadata': {
-                            'url': `/watch?v=${videos[videoIndex][0]}&list=${params.get('list')}&ytpa-random=${ytpaRandom}`,
-                            'webPageType': 'WEB_PAGE_TYPE_WATCH',
-                            'rootVe': 3832, // ??? required though
-                        },
-                    },
-                    'watchEndpoint': {
-                        'videoId': videos[videoIndex][0],
-                        'playlistId': params.get('list'),
-                    },
-                };
-                document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
-                redirector.click();
+                redirect(videos[videoIndex][0], params.get('list'), { 'ytpa-random': ytpaRandom });
             }
         };
 
@@ -1052,7 +1034,6 @@
             }
 
             safeEventListener(document, 'keydown', event => {
-                // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
                     event.stopImmediatePropagation();
                     event.preventDefault();
@@ -1061,6 +1042,11 @@
                     markWatched(videoId);
                     // Unfortunately there is no workaround to YouTube redirecting to the next in line without a reload
                     playNextRandom(true);
+                }
+
+                if (event.shiftKey && event.key.toLowerCase() === 'p') {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
                 }
             }, true);
 
@@ -2403,7 +2389,9 @@
     })();
 
     const YtpaParams = (() => {
-        const params = {};
+        let params = {};
+        let path = null;
+        let attributePrefix = 'data-param-';
 
         /**
          * @type {{ [key: string]: string }}
@@ -2416,22 +2404,38 @@
 
                 return undefined;
             },
-            set(target, p, newValue, receiver) {
+            set(target, p, newValue) {
                 if (typeof p === 'string') {
                     params['ytpa-' + p.replace(/([A-Z])/g, '-$1').toLowerCase()] = newValue;
                 }
             },
         });
-        new URLSearchParams(window.location.search)
-            .forEach((value, name) => {
-                if (!name.match(/^ytpa-.+/)) return;
 
-                params[name] = value;
-            });
+        const updateParams = () => {
+            if (window.location.pathname === path) return
 
-        // ensure custom GET params survive YouTube changing the location constantly
-        // this is only relevant for reloading and sharing
+            params = {};
+            path = window.location.pathname;
+
+            Array.from(document.documentElement.attributes)
+                .map(it => it.name)
+                .filter(it => it.startsWith(attributePrefix))
+                .forEach(it => document.documentElement.removeAttribute(it));
+
+            new URLSearchParams(window.location.search)
+                .forEach((value, name) => {
+                    if (!name.match(/^ytpa-.+/)) return;
+
+                    params[name] = value;
+                });
+        };
+
+        updateParams();
         Safety.safeInterval(() => {
+            updateParams();
+
+            // ensure custom GET params survive YouTube changing the location constantly
+            // this is only relevant for reloading and sharing
             const search = new URLSearchParams(window.location.search);
             Object.entries(params).forEach(([name, value]) => {
                 if (name.match(/^ytpa-.+-initial$/)) return;
