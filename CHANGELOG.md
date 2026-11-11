@@ -1,5 +1,9 @@
 # YTPA Changelog
 
+## 20261111-1
+
+* Solve timing problems from stale getPlayer() results in standalone extension.
+
 ## 20261111-0
 
 * Finally, implement a stable reverse-playlist watching system. Allows for playing by oldest.
