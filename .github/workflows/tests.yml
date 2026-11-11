@@ -10,6 +10,9 @@ on:
 jobs:
     docker-test:
         runs-on: ubuntu-22.04
+        
+        permissions:
+            actions: write
 
         steps:
             -   name: Checkout repo
@@ -42,3 +45,8 @@ jobs:
             -   name: Fail job if on failure
                 if: env.EXIT_CODE != '0'
                 run: exit 1
+
+            -   name: Remove old artifacts
+                uses: c-hive/gha-remove-artifacts@v1
+                with:
+                    age: '1 month'
