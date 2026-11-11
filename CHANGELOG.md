@@ -1,5 +1,10 @@
 # YTPA Changelog
 
+## 20261111-0
+
+* Finally, implement a stable reverse-playlist watching system. Allows for playing by oldest.
+
+
 ## Infrastructure 2026-08-09
 
 * Update testing dependencies and temporarily disable a minor failing test caused by YouTube bot detection.

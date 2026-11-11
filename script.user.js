@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20260523-0
+// @version         20261111-0
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -85,6 +85,7 @@
         Greeter,
         Reset,
         Debug,
+        YtpaParams,
     } = syncModules;
     const SettingsStorage = await asyncModule('SettingsStorage', asyncModules);
     const SettingsDialog = await asyncModule('SettingsDialog', asyncModules);
@@ -123,26 +124,35 @@
 
     const ytpaBtnSelectedAttribute = 'data-ytpa-button-selection-detection-selected';
 
-    const getVideoId = url => new URLSearchParams(new URL(url).search).get('v');
+    const getVideoId = url => new URL(url).searchParams.get('v');
 
     /**
      * @return {{ getProgressState: () => { current: number, duration: number }, pauseVideo: () => void, seekTo: (number) => void }}
      */
     const getPlayer = () => document.querySelector('#movie_player');
 
+    const getPlaylistContainer = () => document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer');
+
     const isAdPlaying = () => !!document.querySelector('.ad-interrupting');
 
-    const redirect = (v, list, ytpaRandom = null) => {
+    const redirect = (v, list, args = {}) => {
         if (location.host === 'm.youtube.com') {
-            // TODO: Client side routing on mobile? some day...
+            // TODO: Client side routing on mobile? some day... probably not
         } else {
+            const search = new URLSearchParams();
+            search.set('v', v);
+            search.set('list', list);
+            for (const name in args) {
+                search.set(name, args[name]);
+            }
+
             const redirector = document.createElement('a');
             redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
             redirector.setAttribute('hidden', '');
             redirector.data = {
                 'commandMetadata': {
                     'webCommandMetadata': {
-                        'url': `/watch?v=${v}&list=${list}${ytpaRandom !== null ? `&ytpa-random=${ytpaRandom}` : ''}`,
+                        'url': `/watch?${search}`,
                         'webPageType': 'WEB_PAGE_TYPE_WATCH',
                         'rootVe': 3832, // ??? required though
                     },
@@ -344,6 +354,23 @@
             return `/playlist?list=${playlist}${id}&playnext=1`;
         };
 
+        // TODO: support mobile?
+        const getFirstVideoShown = async () => await new Promise(resolve => {
+            const fn = () => {
+                const element = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) #primary > ytd-rich-grid-renderer:not([continuation-is-reloading]) .ytLockupViewModelContentImage');
+
+                if (!element) {
+                    setTimeout(fn, 500);
+
+                    return;
+                }
+
+                resolve(element.href.replaceAll('&amp;', '&'))
+            };
+
+            fn();
+        });
+
         if (currentSelection === 1 || parent.querySelector(':nth-child(1).selected, :nth-child(1).iron-selected') || parent.classList.contains('ytpa-button-container')) {
             parent.insertAdjacentElement(
                 'beforeend',
@@ -361,13 +388,27 @@
                     .build(),
             );
         } else {
-            parent.insertAdjacentElement(
-                'beforeend',
-                $builder('a.ytpa-btn.ytpa-play-all-btn.ytpa-unsupported[role="button"][target="_blank"][rel="noreferrer"]')
-                    .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
-                    .onBuildText('No Playlist Found')
-                    .build(),
-            );
+            if (location.host === 'm.youtube.com') {
+                parent.insertAdjacentElement(
+                    'beforeend',
+                    $builder('a.ytpa-btn.ytpa-play-all-btn.ytpa-unsupported[role="button"][target="_blank"][rel="noreferrer"]')
+                        .href(`https://github.com/RobertWesner/YouTube-Play-All/issues/39`)
+                        .onBuildText('No Playlist Found')
+                        .build(),
+                );
+            } else {
+                // TODO: supporting setting showPlaylistInsteadOfPlaying requires modifying the view-playlist site to change the links
+                const btn = $builder('a.ytpa-btn.ytpa-play-oldest-btn[role="button"]')
+                    .onBuildAppend("Loading...")
+                    .build();
+                parent.insertAdjacentElement('beforeend', btn);
+
+                getFirstVideoShown()
+                    .then(href => {
+                        btn.href = `${href}&list=${allPlaylist}${id}&ytpa-reversed=1`;
+                        btn.textContent = 'Play Oldest';
+                    });
+            }
         }
 
         if (location.host === 'm.youtube.com') {
@@ -505,7 +546,7 @@
         }
 
         // This check is necessary for the mobile Interval
-        if (document.querySelector('.ytpa-play-all-btn')) {
+        if (document.querySelector('.ytpa-play-all-btn, .ytpa-play-oldest-btn')) {
             return;
         }
 
@@ -574,15 +615,13 @@
                  *  videoId: string,
                  * }} item
                  */
-                item => {
-                    const element = document.createElement('div');
-                    element.className = 'item';
-                    element.textContent = item.title;
-                    element.setAttribute('data-id', item.videoId);
-                    safeEventListener(element, 'click', () => redirect(item.videoId, list));
-
-                    itemsContainer.append(element);
-                },
+                item => itemsContainer.append(
+                    $builder('div.item')
+                        .data_id(item.videoId)
+                        .onBuildText(item.title)
+                        .on('click', () => redirect(item.videoId, list))
+                        .build(),
+                ),
             );
 
             markCurrentItem(params.get('v'));
@@ -595,7 +634,11 @@
                 return;
             }
 
-            document.querySelector(`.ytpa-playlist-emulator .items .item[data-current] + .item`)?.click();
+            const selector = YtpaParams.reversed
+                ? '.ytpa-playlist-emulator .item:has(+ .item[data-current]), .ytpa-playlist-emulator .items .item:last-of-type'
+                : '.ytpa-playlist-emulator .items .item[data-current] + .item';
+
+            document.querySelector(selector)?.click();
         };
 
         const markCurrentItem = videoId => {
@@ -736,6 +779,87 @@
         }
     })();
 
+    // By-Oldest / any reversed playlist
+    (() => {
+        const player = getPlayer();
+
+        safeInterval(() => {
+            if (!window.location.pathname.endsWith('/watch')) {
+                return;
+            }
+
+            if (!YtpaParams.reversed) return;
+
+            const attr = 'data-ytpa-reversed-shortcuts'
+            if (document.body && !document.body.hasAttribute(attr)) {
+                document.body.setAttribute(attr, 'applied');
+
+                const createKeyEvent = (char, shift = false) => {
+                    const up = char.toUpperCase();
+                    const event = new KeyboardEvent('keydown', {
+                        bubbles: true,
+                        cancelable: true,
+                        key: shift ? up : char.toLowerCase(),
+                        code: `Key${up}`,
+                        keyCode: up.charCodeAt(0),
+                        shiftKey: shift,
+                    });
+                    event.ytpaNoTransform = true;
+
+                    return event;
+                };
+
+                safeEventListener(document.body, 'keydown', event => {
+                    if (event.ytpaNoTransform) return;
+
+                    if (event.shiftKey && event.key.toLowerCase() === 'n') {
+                        event.stopImmediatePropagation();
+                        event.preventDefault();
+                        document.body.dispatchEvent(createKeyEvent('p', true));
+                    }
+
+                    if (event.shiftKey && event.key.toLowerCase() === 'p') {
+                        event.stopImmediatePropagation();
+                        event.preventDefault();
+                        document.body.dispatchEvent(createKeyEvent('n', true));
+                    }
+                }, true);
+
+                // this is necessary, otherwise you keep skipping to the start of the current video
+                safeEventListener(document.querySelector('.ytp-prev-button'), 'click', () => {
+                    player.pauseVideo();
+                    document.body.dispatchEvent(createKeyEvent('p', true));
+                    player.pauseVideo();
+                });
+            }
+
+            // emulator handles this if the widget is gone
+            const container = getPlaylistContainer();
+            if (!container) return;
+
+            container.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-reversed="])')
+                .forEach(it => {
+                    const url = new URL(it.href);
+                    const params = url.searchParams;
+                    params.set('ytpa-reversed', '1');
+                    it.href = url;
+                });
+
+            const progressState = player.getProgressState();
+            if (isAdPlaying() || progressState.current < progressState.duration - 2) return;
+
+            const href = document.querySelector(':has(+ ytd-playlist-panel-video-renderer[selected]) a')?.href;
+            if (!href) throw 'Could not obtain next video to play in reverse!';
+
+            const search = new URL(href).searchParams;
+            const videoId = search.get('v');
+
+            player.pauseVideo();
+            player.seekTo(0);
+            redirect(videoId, search.get('list'), { 'ytpa-reversed': 1 });
+        }, 500);
+    })();
+
     // Random play feature
     (() => {
         // Random play is not supported for mobile devices
@@ -743,19 +867,18 @@
             return;
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
+        const search = new URLSearchParams(window.location.search);
 
-        if (!urlParams.has('ytpa-random') || urlParams.get('ytpa-random') === '0') {
+        if (!YtpaParams.random) {
             return;
         }
 
         /**
          * @type {'random'|'prefer-newest'|'prefer-oldest'}
          */
-        const ytpaRandom = urlParams.get('ytpa-random');
-        const getPlaylistContainer = () => document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer');
+        const ytpaRandom = YtpaParams.random;
 
-        const getStorageKey = () => `ytpa-random-${urlParams.get('list')}`;
+        const getStorageKey = () => `ytpa-random-${search.get('list')}`;
         const updateStorage = () => {
             const elements = getPlaylistContainer().querySelectorAll('a#wc-endpoint:not([href*="&ytpa-random="])');
             if (elements.length === 0) {
@@ -763,7 +886,7 @@
             }
 
             elements.forEach(element => {
-                const videoId = (new URLSearchParams(new URL(element.href).searchParams)).get('v');
+                const videoId = new URL(element.href).searchParams.get('v');
                 if (!isWatched(videoId)) {
                     localStorage.setItem(getStorageKey(), JSON.stringify({ ...getStorage(true), [videoId]: false }));
                 }
@@ -853,25 +976,7 @@
                 params.delete('ytpa-random-initial');
                 window.location.href = `${window.location.pathname}?${params.toString()}`;
             } else {
-                // TODO: refactor to the new redirect() function
-                const redirector = document.createElement('a');
-                redirector.className = 'yt-simple-endpoint style-scope ytd-playlist-panel-video-renderer';
-                redirector.setAttribute('hidden', '');
-                redirector.data = {
-                    'commandMetadata': {
-                        'webCommandMetadata': {
-                            'url': `/watch?v=${videos[videoIndex][0]}&list=${params.get('list')}&ytpa-random=${ytpaRandom}`,
-                            'webPageType': 'WEB_PAGE_TYPE_WATCH',
-                            'rootVe': 3832, // ??? required though
-                        },
-                    },
-                    'watchEndpoint': {
-                        'videoId': videos[videoIndex][0],
-                        'playlistId': params.get('list'),
-                    },
-                };
-                document.querySelector('ytd-playlist-panel-renderer #items').append(redirector);
-                redirector.click();
+                redirect(videos[videoIndex][0], params.get('list'), { 'ytpa-random': ytpaRandom });
             }
         };
 
@@ -921,7 +1026,7 @@
 
                             localStorage.removeItem(getStorageKey());
 
-                            const params = new URLSearchParams(location.search);
+                            const params = new URLSearchParams(window.location.search);
                             params.delete('ytpa-random');
                             window.location.href = `${window.location.pathname}?${params.toString()}`;
                         })
@@ -936,12 +1041,11 @@
                 );
             }, 5000);
 
-            if (urlParams.get('ytpa-random-initial') === '1' || isWatched(getVideoId(location.href))) {
+            if (YtpaParams.randomInitial === '1' || isWatched(getVideoId(location.href))) {
                 playNextRandom();
             }
 
             safeEventListener(document, 'keydown', event => {
-                // SHIFT + N
                 if (event.shiftKey && event.key.toLowerCase() === 'n') {
                     event.stopImmediatePropagation();
                     event.preventDefault();
@@ -950,6 +1054,11 @@
                     markWatched(videoId);
                     // Unfortunately there is no workaround to YouTube redirecting to the next in line without a reload
                     playNextRandom(true);
+                }
+
+                if (event.shiftKey && event.key.toLowerCase() === 'p') {
+                    event.stopImmediatePropagation();
+                    event.preventDefault();
                 }
             }, true);
 
@@ -961,7 +1070,7 @@
             safeInterval(() => {
                 const videoId = getVideoId(location.href);
 
-                const params = new URLSearchParams(location.search);
+                const params = new URLSearchParams(window.location.search);
                 params.set('ytpa-random', ytpaRandom);
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
@@ -975,7 +1084,7 @@
                     }
 
                     // Autoplay random video
-                    if (progressState.current >= progressState.duration - 3) {
+                    if (progressState.current >= progressState.duration - 2) {
                         // make sure vanilla autoplay doesn't take over
                         player.pauseVideo();
                         player.seekTo(0);
@@ -1268,6 +1377,17 @@
                         r="3.5"
                         fill="currentColor"
                     />
+                </svg>
+            `),
+            reverse: create(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+                    <path
+                        style="stroke-width:10;stroke-linejoin:round;paint-order:stroke fill markers"
+                        transform="matrix(1.1890912,0,0,1.1890912,-5.3812076,10.71113)"
+                        d="m 5.235605,3.2178511 10.615151,-6.1286599 a 1.4202516,1.4202516 30.000003 0 1 2.130378,1.2299741 l -1e-6,12.2573207 A 1.4202517,1.4202517 150 0 1 15.850756,11.80646 L 5.2356049,5.6777991 a 1.4202516,1.4202516 90.000003 0 1 10e-8,-2.459948 z"/>
+                    <path style="stroke-width:10;stroke-linejoin:round;paint-order:stroke fill markers"
+                        transform="matrix(1.1890912,0,0,1.1890912,10.618793,10.71113)"
+                        d="m 5.235605,3.2178511 10.615151,-6.1286599 a 1.4202516,1.4202516 30.000003 0 1 2.130378,1.2299741 l -1e-6,12.2573207 A 1.4202517,1.4202517 150 0 1 15.850756,11.80646 L 5.2356049,5.6777991 a 1.4202516,1.4202516 90.000003 0 1 10e-8,-2.459948 z"/>
                 </svg>
             `),
         };
@@ -2280,6 +2400,71 @@
         };
     })();
 
+    const YtpaParams = (() => {
+        let params = {};
+        let path = null;
+        let list = null;
+        const attributePrefix = 'data-param-';
+
+        /**
+         * @type {{ [key: string]: string }}
+         */
+        const proxy = new Proxy({}, {
+            get(target, p) {
+                if (typeof p === 'string') {
+                    return params['ytpa-' + p.replace(/([A-Z])/g, '-$1').toLowerCase()];
+                }
+
+                return undefined;
+            },
+            set(target, p, newValue) {
+                if (typeof p === 'string') {
+                    params['ytpa-' + p.replace(/([A-Z])/g, '-$1').toLowerCase()] = newValue;
+                }
+            },
+        });
+
+        const updateParams = () => {
+            const listParam = new URLSearchParams(window.location.search).get('list');
+            if (window.location.pathname === path && listParam === list) return
+
+            params = {};
+            path = window.location.pathname;
+            list = listParam;
+
+            Array.from(document.documentElement.attributes)
+                .map(it => it.name)
+                .filter(it => it.startsWith(attributePrefix))
+                .forEach(it => document.documentElement.removeAttribute(it));
+
+            new URLSearchParams(window.location.search)
+                .forEach((value, name) => {
+                    if (!name.match(/^ytpa-.+/)) return;
+
+                    params[name] = value;
+                });
+        };
+
+        updateParams();
+        Safety.safeInterval(() => {
+            updateParams();
+
+            // ensure custom GET params survive YouTube changing the location constantly
+            // this is only relevant for reloading and sharing
+            const search = new URLSearchParams(window.location.search);
+            Object.entries(params).forEach(([name, value]) => {
+                if (name.match(/^ytpa-.+-initial$/)) return;
+
+                search.set(name, value.toString());
+                document.documentElement.setAttribute(`data-param-${name}`, value.toString());
+            });
+
+            window.history.replaceState({}, '', `${window.location.pathname}?${search.toString()}`);
+        }, 2000);
+
+        return proxy;
+    })();
+
     return [{
         Id,
         Obj,
@@ -2299,6 +2484,7 @@
         SettingsHandlers,
         Reset,
         Debug,
+        YtpaParams,
     }, {
         SettingsStorage,
         SettingsDialog,
@@ -2306,7 +2492,7 @@
 }, () => {
     const s = G.s.ui;
     const ifUi = setting => `html[ytpa-ui-setting~="${setting}"]`;
-    const dark = '[dark], [darker-dark-theme]';
+    const dark = '[dark]';
 
     return [
         ['ytpa-btn-height', ''],
@@ -2554,12 +2740,12 @@
                 display: none !important;
             }
     
-            /* hide when sorting by oldest */
+            /* hide random play when sorting by oldest */
             :is(
                 ytm-feed-filter-chip-bar-renderer > div,
                 ytd-feed-filter-chip-bar-renderer iron-selector#chips,
                 .ytChipBarViewModelHost
-            ):has(.ytpa-btn.ytpa-unsupported) .ytpa-btn.ytpa-unsupported ~ .ytpa-btn {
+            ):has(.ytpa-btn.ytpa-play-oldest-btn) .ytpa-btn.ytpa-play-oldest-btn ~ .ytpa-btn {
                 display: none;
             }
     
@@ -2597,16 +2783,28 @@
                 --ytpa-playbtn-text: white;
             }
 
+            html:is(${dark}) .ytpa-play-oldest-btn {
+                --ytpa-playbtn-uniquecolor: #1A6100;
+                --ytpa-playbtn-uniquecolor-hover: #238500;
+                --ytpa-playbtn-text: white;
+            }
+
             html:not(:is(${dark})) .ytpa-play-all-btn {
                 --ytpa-playbtn-uniquecolor: #fac7ff;
                 --ytpa-playbtn-uniquecolor-hover: #eb8df1;
-                --ytpa-playbtn-text: white;
+                --ytpa-playbtn-text: black;
             }
 
             html:not(:is(${dark})) :is(.ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover) {
                 --ytpa-playbtn-uniquecolor: #bad2ff;
-                --ytpa-playbtn-uniquecolor-hover: #3f60a1;
-                --ytpa-playbtn-text: white;
+                --ytpa-playbtn-uniquecolor-hover: #799be0;
+                --ytpa-playbtn-text: black;
+            }
+
+            html:not(:is(${dark})) .ytpa-play-oldest-btn {
+                --ytpa-playbtn-uniquecolor: #9ddb8c;
+                --ytpa-playbtn-uniquecolor-hover: #67C74D;
+                --ytpa-playbtn-text: black;
             }
 
             .ytpa-play-all-btn.ytpa-unsupported {
@@ -2623,28 +2821,28 @@
             }
 
             /* CLASSIC */
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-random-popover > a:visited, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-play-oldest-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-random-popover > *, .ytpa-random-popover > a:visited, .ytpa-settings-btn) {
                 background-color: var(--ytpa-playbtn-uniquecolor);
                 color: var(--ytpa-playbtn-text);
             }
 
-            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn):hover {
+            ${ifUi(s.button.theme.classic)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-play-oldest-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn):hover {
                 background-color: var(--ytpa-playbtn-uniquecolor-hover);
             }
 
             /* ADAPTIVE */
-            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.adaptive)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-play-oldest-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive) !important;
                 color: var(--ytpa-fg-primary) !important;
             }
-            
+
             /* ADAPTIVE OUTLINE */
-            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn > .ytpa-btn-section, .ytpa-play-oldest-btn, .ytpa-random-badge, .ytpa-random-notice, .ytpa-settings-btn) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
 
-            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn, .ytpa-random-badge, .ytpa-random-notice) {
+            ${ifUi(s.button.theme.adaptiveOutline)} :is(.ytpa-play-all-btn, .ytpa-random-btn, .ytpa-play-oldest-btn, .ytpa-random-badge, .ytpa-random-notice) {
                 --thickness: 2px;
                 --translate: -2px;
                 transform: translate(var(--translate), var(--translate));
@@ -2657,12 +2855,12 @@
                 background-color: var(--ytpa-bg-base);
                 color: var(--ytpa-fg-primary);
             }
-            
-            :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) :is(.ytpa-random-popover > *, .ytpa-random-popover > a:visited){
+
+            :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) :is(.ytpa-random-popover > *, .ytpa-random-popover > a:visited) {
                 background-color: var(--ytpa-bg-additive);
                 color: var(--ytpa-fg-primary);
             }
-            
+
             :is(${ifUi(s.button.theme.adaptive)}, ${ifUi(s.button.theme.adaptiveOutline)}) .ytpa-random-notice {
                 margin-left: 2px;
                 width: 100%;
@@ -2672,7 +2870,7 @@
             ${ifUi(s.settings.button.show)} .ytpa-settings-btn {
                 display: flex !important;
             }
-            
+
             .ytpa-random-badge {
                 margin-left: 0.4em;
             }
@@ -2942,6 +3140,34 @@
                 margin-left: 0.5em;
             }
         `],
+        ['ytpa-reversed', /* language=css */ `
+            html[data-param-ytpa-reversed] {
+                & .playlist-items.ytd-playlist-panel-renderer, .ytpa-playlist-emulator .items {
+                    display: flex;
+                    flex-direction: column-reverse;
+                }
+
+                & .ytd-playlist-panel-renderer .title span::before {
+                    content: 'Reversed ';
+                }
+                
+                /* so evil, yet so elegant */
+                .ytp-left-controls {
+                    & > :first-child { order: 1 }
+                    & > .ytp-prev-button { 
+                        order: 3;
+                        transform: scaleX(-1);
+                        margin-left: 0 !important;
+                    }
+                    & > .ytp-next-button { 
+                        order: 2;
+                        transform: scaleX(-1);
+                        margin-left: 8px !important;
+                    }
+                    ${Array.from({ length: 100 }, (_, i) => 4 + i).map(n => `& > :nth-child(${n}) { order: ${n}; }`).join('\n')}
+                }
+            }
+        `]
     ];
 }))((() => {
     // -- scriptGlobals --

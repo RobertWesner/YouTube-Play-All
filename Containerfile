@@ -3,7 +3,7 @@ FROM node:25.2.0-slim
 WORKDIR /app
 
 RUN apt update && apt install -y \
-    curl git ca-certificates python3 python3-pip make g++ \
+    curl git ca-certificates python3 python3-pip make g++ unzip \
     libglib2.0-0 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
     libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
     libx11-xcb1 libxext6 libxshmfence1 libasound2 libx11-6 libxcb1 \
@@ -19,7 +19,7 @@ RUN groupadd -r appuser && \
 
 USER appuser
 
-RUN npm ci
+RUN npm ci && npx puppeteer browsers install chrome@stable
 
 COPY script.user.js /
 COPY testing .
