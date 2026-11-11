@@ -1,5 +1,7 @@
 FROM node:25.2.0-slim
 
+LABEL org.opencontainers.image.source="https://github.com/RobertWesner/YouTube-Play-All"
+
 WORKDIR /app
 
 RUN apt update && apt install -y \

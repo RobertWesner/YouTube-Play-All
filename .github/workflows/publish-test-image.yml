@@ -1,0 +1,58 @@
+name: Publish test container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Containerfile
+      - testing/package.json
+      - testing/package-lock.json
+      - testing/spago.yaml
+      - testing/spago.lock
+      - .github/workflows/publish-test-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-test-image
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute dependency image tag
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          deps_hash="$(sha256sum Containerfile testing/package.json testing/package-lock.json testing/spago.yaml testing/spago.lock | sha256sum | cut -c1-16)"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}-tests"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "tag=deps-$deps_hash" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}:${{ steps.image.outputs.tag }}
+            ${{ steps.image.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,52 +1,60 @@
 name: Tests
+
 on:
-    pull_request:
-    push:
-        branches: [ main ]
-    schedule:
-        -   cron: "7,37 * * * *"
-    workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
-    docker-test:
-        runs-on: ubuntu-22.04
-        
-        permissions:
-            actions: write
+  docker-test:
+    runs-on: ubuntu-22.04
 
-        steps:
-            -   name: Checkout repo
-                uses: actions/checkout@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-            -   name: Build image
-                run: |
-                    IMAGE_ID=$(docker build -q -f Containerfile .)
-                    echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
+      - name: Pull prebuilt image
+        run: |
+          image="ghcr.io/robertwesner/youtube-play-all-tests:latest"
+          docker pull "$image"
+          echo "IMAGE_ID=$image" >> "$GITHUB_ENV"
 
-            -   name: Run container
-                run: |
-                    mkdir -p debug_out
-                    chmod 0777 debug_out
-                    set +e
-                    docker run \
-                        -v ${{ github.workspace }}/debug_out:/tmp/ytpa_test_error \
-                        "$IMAGE_ID"
-                    EXIT_CODE=$?
-                    echo "EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
-                    exit 0
+      - name: Run current checkout's tests in container
+        shell: bash
+        run: |
+          mkdir -p debug_out
+          chmod 0777 debug_out
+          set +e
+          docker run --rm \
+            -v "${{ github.workspace }}/script.user.js:/script.user.js:ro" \
+            -v "${{ github.workspace }}/testing/src:/app/src:ro" \
+            -v "${{ github.workspace }}/debug_out:/tmp/ytpa_test_error" \
+            "$IMAGE_ID" \
+            sh -lc "spago build -q && node --input-type=module -e \"import('/app/output/Run.Test.All/index.js').then(m => m.main())\""
+          EXIT_CODE=$?
+          echo "EXIT_CODE=$EXIT_CODE" >> "$GITHUB_ENV"
+          exit 0
 
-            -   name: Upload debug artifact on failure
-                if: env.EXIT_CODE != '0'
-                uses: actions/upload-artifact@v5
-                with:
-                    name: debug
-                    path: debug_out
+      - name: Upload debug artifact on failure
+        if: env.EXIT_CODE != '0'
+        uses: actions/upload-artifact@v5
+        with:
+          name: debug
+          path: debug_out
 
-            -   name: Fail job if on failure
-                if: env.EXIT_CODE != '0'
-                run: exit 1
+      - name: Fail job on failure
+        if: env.EXIT_CODE != '0'
+        run: exit 1
 
-            -   name: Remove old artifacts
-                uses: c-hive/gha-remove-artifacts@v1
-                with:
-                    age: '1 month'
+      - name: Remove old artifacts
+        if: github.event_name != 'pull_request'
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '1 month'

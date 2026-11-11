@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20261111-0
+// @version         20261111-1
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -757,6 +757,7 @@
 
             safeInterval(() => {
                 const player = getPlayer();
+                if (!player) return;
                 const progressState = player.getProgressState();
 
                 // Do not listen for watch progress when watching advertisements
@@ -781,14 +782,15 @@
 
     // By-Oldest / any reversed playlist
     (() => {
-        const player = getPlayer();
-
         safeInterval(() => {
             if (!window.location.pathname.endsWith('/watch')) {
                 return;
             }
 
             if (!YtpaParams.reversed) return;
+
+            const player = getPlayer();
+            if (!player) return;
 
             const attr = 'data-ytpa-reversed-shortcuts'
             if (document.body && !document.body.hasAttribute(attr)) {
@@ -944,7 +946,7 @@
                 return;
             }
 
-            getPlayer().pauseVideo();
+            getPlayer()?.pauseVideo();
 
             const videos = Object.entries(getStorage()).filter(([_, watched]) => !watched);
             const params = new URLSearchParams(window.location.search);
@@ -1075,6 +1077,7 @@
                 window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 
                 const player = getPlayer();
+                if (!player) return;
                 const progressState = player.getProgressState();
 
                 // Do not listen for watch progress when watching advertisements

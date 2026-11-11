@@ -1,22 +1,22 @@
 name: Notify downstream
 on:
-    release:
-        types: [published]
+  release:
+    types: [published]
 
 jobs:
-    trigger:
-        runs-on: ubuntu-latest
-        steps:
-            -   uses: tibdex/github-app-token@v2
-                id: app-token
-                with:
-                    app_id: ${{ secrets.APP_ID }}
-                    private_key: ${{ secrets.APP_PRIVATE_KEY }}
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      -   uses: tibdex/github-app-token@v2
+          id: app-token
+          with:
+            app_id: ${{ secrets.APP_ID }}
+            private_key: ${{ secrets.APP_PRIVATE_KEY }}
 
-            -   name: Notify
-                env:
-                    GH_TOKEN: ${{ steps.app-token.outputs.token }}
-                run: |
-                    gh workflow run release.yml \
-                        -R RobertWesner/YouTube-Play-All-Standalone \
-                        -f tag='${{ github.event.release.tag_name }}'
+      -   name: Notify
+          env:
+            GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          run: |
+            gh workflow run release.yml \
+                -R RobertWesner/YouTube-Play-All-Standalone \
+                -f tag='${{ github.event.release.tag_name }}'
