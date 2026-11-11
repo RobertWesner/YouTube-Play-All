@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20261110-0-rc3
+// @version         20261110-0-rc4
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -826,9 +826,11 @@
                 }, true);
 
                 // this is necessary, otherwise you keep skipping to the start of the current video
-                safeEventListener(document.querySelector('.ytp-prev-button'), 'click', () =>
-                    document.body.dispatchEvent(createKeyEvent('p', true)),
-                );
+                safeEventListener(document.querySelector('.ytp-prev-button'), 'click', () => {
+                    player.pauseVideo();
+                    document.body.dispatchEvent(createKeyEvent('p', true));
+                    player.pauseVideo();
+                });
             }
 
             // emulator handles this if the widget is gone
