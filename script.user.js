@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20261110-0-rc2
+// @version         20261110-0-rc3
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -130,6 +130,8 @@
      * @return {{ getProgressState: () => { current: number, duration: number }, pauseVideo: () => void, seekTo: (number) => void }}
      */
     const getPlayer = () => document.querySelector('#movie_player');
+
+    const getPlaylistContainer = () => document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer');
 
     const isAdPlaying = () => !!document.querySelector('.ad-interrupting');
 
@@ -829,11 +831,20 @@
                 );
             }
 
+            // emulator handles this if the widget is gone
+            const container = getPlaylistContainer();
+            if (!container) return;
+
+            container.querySelectorAll('a#wc-endpoint:not([href*="&ytpa-reversed="])')
+                .forEach(it => {
+                    const url = new URL(it.href);
+                    const params = url.searchParams;
+                    params.set('ytpa-reversed', '1');
+                    it.href = url;
+                });
+
             const progressState = player.getProgressState();
             if (isAdPlaying() || progressState.current < progressState.duration - 2) return;
-
-            // emulator handles this if the widget is gone
-            if (!document.querySelector('#secondary-inner > ytd-playlist-panel-renderer#playlist #items:not(:empty)')) return;
 
             const href = document.querySelector(':has(+ ytd-playlist-panel-video-renderer[selected]) a')?.href;
             if (!href) throw 'Could not obtain next video to play in reverse!';
@@ -864,7 +875,6 @@
          * @type {'random'|'prefer-newest'|'prefer-oldest'}
          */
         const ytpaRandom = YtpaParams.random;
-        const getPlaylistContainer = () => document.querySelector('#secondary ytd-playlist-panel-renderer, #below ytd-playlist-panel-renderer');
 
         const getStorageKey = () => `ytpa-random-${search.get('list')}`;
         const updateStorage = () => {
@@ -2391,6 +2401,7 @@
     const YtpaParams = (() => {
         let params = {};
         let path = null;
+        let list = null;
         let attributePrefix = 'data-param-';
 
         /**
@@ -2412,10 +2423,12 @@
         });
 
         const updateParams = () => {
-            if (window.location.pathname === path) return
+            const listParam = new URLSearchParams(window.location.search).get('list');
+            if (window.location.pathname === path && listParam === list) return
 
             params = {};
             path = window.location.pathname;
+            list = listParam;
 
             Array.from(document.documentElement.attributes)
                 .map(it => it.name)
