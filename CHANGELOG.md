@@ -1,8 +1,8 @@
 # YTPA Changelog
 
-## Next
+## 20261111-0
 
-* Finally, implement a stable reverse-playlist watching system.
+* Finally, implement a stable reverse-playlist watching system. Allows for playing by oldest.
 
 
 ## Infrastructure 2026-08-09
