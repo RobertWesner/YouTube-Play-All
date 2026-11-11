@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            YouTube Play All
 // @description     Adds the Play-All-Button to the videos, shorts, and live sections of a YouTube-Channel
-// @version         20261111-1
+// @version         20261111-2
 // @author          Robert Wesner (https://robert.wesner.io)
 // @license         MIT
 // @namespace       http://robert.wesner.io/
@@ -357,15 +357,23 @@
         // TODO: support mobile?
         const getFirstVideoShown = async () => await new Promise(resolve => {
             const fn = () => {
-                const element = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) #primary > ytd-rich-grid-renderer:not([continuation-is-reloading]) .ytLockupViewModelContentImage');
+                let href;
+                if (window.location.pathname.endsWith('/shorts')) {
+                    const id = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) #primary > ytd-rich-grid-renderer:not([continuation-is-reloading]) ytm-shorts-lockup-view-model a')
+                        ?.href?.split('/')?.pop();
+                    href = `/watch?v=${id}`;
+                } else {
+                    href = document.querySelector(':is(ytd-browse, ytm-browse):not([hidden]) #primary > ytd-rich-grid-renderer:not([continuation-is-reloading]) .ytLockupViewModelContentImage')
+                        ?.href?.replaceAll('&amp;', '&');
+                }
 
-                if (!element) {
+                if (!href) {
                     setTimeout(fn, 500);
 
                     return;
                 }
 
-                resolve(element.href.replaceAll('&amp;', '&'))
+                resolve(href)
             };
 
             fn();
