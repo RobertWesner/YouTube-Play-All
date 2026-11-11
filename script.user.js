@@ -2404,7 +2404,7 @@
         let params = {};
         let path = null;
         let list = null;
-        let attributePrefix = 'data-param-';
+        const attributePrefix = 'data-param-';
 
         /**
          * @type {{ [key: string]: string }}
