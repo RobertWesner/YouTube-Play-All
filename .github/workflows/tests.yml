@@ -37,7 +37,7 @@ jobs:
             -v "${{ github.workspace }}/testing/src:/app/src:ro" \
             -v "${{ github.workspace }}/debug_out:/tmp/ytpa_test_error" \
             "$IMAGE_ID" \
-            sh -lc 'spago build -q && node --input-type=module -e "import("/app/output/Run.Test.All/index.js").then(m => m.main())"'
+            sh -lc "spago build -q && node --input-type=module -e \"import('/app/output/Run.Test.All/index.js').then(m => m.main())\""
           EXIT_CODE=$?
           echo "EXIT_CODE=$EXIT_CODE" >> "$GITHUB_ENV"
           exit 0
