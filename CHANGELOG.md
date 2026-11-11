@@ -1,5 +1,9 @@
 # YTPA Changelog
 
+## 20261111-2
+
+* Fix shorts by-oldest lookup failing due to UI mismatch.
+
 ## 20261111-1
 
 * Solve timing problems from stale getPlayer() results in standalone extension.
