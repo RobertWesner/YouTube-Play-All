@@ -19,5 +19,4 @@ jobs:
                 run: |
                     gh workflow run release.yml \
                         -R RobertWesner/YouTube-Play-All-Standalone \
-                        -f tag='${{ github.event.release.tag_name }}' \
-                        -f source_repo='${{ github.repository }}'
+                        -f tag='${{ github.event.release.tag_name }}'
